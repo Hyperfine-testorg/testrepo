@@ -5,9 +5,9 @@ import glob
 import numpy as np
 import pytest
 
-from recon_rrdf.lib.xsdc import xsdc
-from recon_rrdf.lib.xgrid import xgrid
-from recon_rrdf.lib import rrdf_load
+from rrdf.xsdc import xsdc
+from rrdf.xgrid import xgrid
+from rrdf import load
 from scipy.ndimage import shift
 
 
@@ -21,7 +21,6 @@ def get_test_file_path():
     file_path = matches[0] if matches else None
     assert file_path is not None, "No rrdf file found for testing."
     print(f"Found rrdf file: {file_path}")
-    file_path = 'data/_rrdf_20250922_113053.h5'  # this was just for local testing
     return file_path
 
 
@@ -37,7 +36,7 @@ def test_load_dict_from_h5(file_path):
     Test loading a dictionary from an HDF5 file. outside pyHFS context.
     """
     # Load the dictionary from the HDF5 file
-    load_dict_from_h5 = rrdf_load.load_dict_from_h5(file_path)
+    load_dict_from_h5 = load.load_dict_from_h5(file_path)
 
     # Check if the loaded dictionary is a dictionary
     assert isinstance(load_dict_from_h5, dict), "Loaded data is not a dictionary."
@@ -55,7 +54,7 @@ def test_recon_from_rrdf(file_path):
     """
     Test loading RRDF and reconstructing image outide pyHFS context.
     """
-    raw_data_cleaned, coords2d, data_drift, rrdf = rrdf_load.read_rrdf(file_path)
+    raw_data_cleaned, coords2d, data_drift, rrdf = load.read_rrdf(file_path)
     raw_data_cleaned = raw_data_cleaned.expand_dims(dim='CHAN', axis=0)  # add dummy channel dimension is missing for xgrid
     imsize = rrdf['sequence']['matrix_size']  # [r p s]
     partial_fourier = rrdf['sequence']['partial_fourier']  # [r p s], 0-1, where 1 = fully sampled dimension

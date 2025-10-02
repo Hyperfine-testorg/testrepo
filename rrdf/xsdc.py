@@ -6,7 +6,7 @@ import xarray as xr
 import numpy as np
 import numba as nb  # this makes things faster, but commented out to keep this simple
 
-from recon_rrdf.lib.rrdf_load import ArrayLabels as lbl
+from rrdf.load import ArrayLabels as lbl
 
 
 def xsdc(

@@ -7,7 +7,7 @@ import numpy as np
 import numba as nb
 import xarray as xr
 
-from recon_rrdf.lib.rrdf_load import ArrayLabels as lbl
+from rrdf.load import ArrayLabels as lbl
 from collections.abc import Sequence
 
 
