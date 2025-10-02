@@ -3,13 +3,14 @@ Test suite for loading RRDF data from HDF5 files.
 """
 
 import glob
+
 import numpy as np
 import pytest
-
-from rrdf.xsdc import xsdc
-from rrdf.xgrid import xgrid
-from rrdf import load
 from scipy.ndimage import shift
+
+from rrdf import load
+from rrdf.xgrid import xgrid
+from rrdf.xsdc import xsdc
 
 
 # --- Tests --- #
