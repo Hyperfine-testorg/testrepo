@@ -21,6 +21,7 @@ def get_test_file_path():
     file_path = matches[0] if matches else None
     assert file_path is not None, "No rrdf file found for testing."
     print(f"Found rrdf file: {file_path}")
+    file_path = 'data/_rrdf_20250922_113053.h5'  # this was just for local testing
     return file_path
 
 
@@ -54,7 +55,6 @@ def test_recon_from_rrdf(file_path):
     """
     Test loading RRDF and reconstructing image outide pyHFS context.
     """
-    file_path = 'data/_rrdf_20250922_113053.h5'  # this was just for local testing
     raw_data_cleaned, coords2d, data_drift, rrdf = rrdf_load.read_rrdf(file_path)
     raw_data_cleaned = raw_data_cleaned.expand_dims(dim='CHAN', axis=0)  # add dummy channel dimension is missing for xgrid
     imsize = rrdf['sequence']['matrix_size']  # [r p s]
