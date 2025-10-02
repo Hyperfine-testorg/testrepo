@@ -1,23 +1,22 @@
 """
 Compute the noise covariance matrix and the prewhitening matrix from noise data - taken from k-space borders.
 """
+
 import numpy as np
 import xarray as xr
 
-from recon_rrdf.lib.rrdf_load import ArrayLabels as lbl
+from rrdf.load import ArrayLabels as lbl
 
 
-def prewhiten(
-        data: xr.DataArray,
-        coords: xr.DataArray
-) -> xr.DataArray:
+def prewhiten(data: xr.DataArray, coords: xr.DataArray) -> xr.DataArray:
     """Uses data from weighted outer kspace samples to get prewhitening matrix."""
     n_channels = data.sizes[lbl.CHAN]
     if lbl.REPS in data.dims:
         data_sum = data[{lbl.CHAN: 0}].sum(
             dim=(
-                (lbl.READOUT, lbl.ENC) if lbl.ECHO not in data.dims else
-                (lbl.READOUT, lbl.ENC, lbl.ECHO)
+                (lbl.READOUT, lbl.ENC)
+                if lbl.ECHO not in data.dims
+                else (lbl.READOUT, lbl.ENC, lbl.ECHO)
             )
         )
         max_rep = np.max(np.nonzero(data_sum.data))
@@ -27,12 +26,14 @@ def prewhiten(
 
     # make channel dimension first
     # get all volumes dimension names (eg: lbl.ECHO, lbl.AVG, ...)
-    volume_dims = [
-        _ for _ in data.dims if _ not in [lbl.CHAN, lbl.READOUT, lbl.ENC]
-    ]
+    volume_dims = [_ for _ in data.dims if _ not in [lbl.CHAN, lbl.READOUT, lbl.ENC]]
     # flatten all volume dimensions with lbl.ENC
-    data_volflat = data.stack({lbl.SAMPLES: volume_dims + [lbl.ENC]}).transpose(lbl.CHAN, lbl.READOUT, lbl.SAMPLES)
-    crds_volflat = coords.stack({lbl.SAMPLES: volume_dims + [lbl.ENC]}).transpose(lbl.COORD, lbl.SAMPLES)
+    data_volflat = data.stack({lbl.SAMPLES: volume_dims + [lbl.ENC]}).transpose(
+        lbl.CHAN, lbl.READOUT, lbl.SAMPLES
+    )
+    crds_volflat = coords.stack({lbl.SAMPLES: volume_dims + [lbl.ENC]}).transpose(
+        lbl.COORD, lbl.SAMPLES
+    )
 
     # Use k-space weighting to derive a "noise" dataset
     kr_pe = np.sqrt((abs(crds_volflat) ** 2).sum(lbl.COORD)).data
@@ -54,10 +55,9 @@ def prewhiten(
 
     # get prewhitening matrix from covariance matrix using Cholesky decomposition
     try:
-        prewhitening_matrix = np.linalg.inv(
-            np.linalg.cholesky(covariance_matrix))
+        prewhitening_matrix = np.linalg.inv(np.linalg.cholesky(covariance_matrix))
     except np.linalg.LinAlgError:
-        print('Singular covariance matrix, returning identity matrix')
+        print("Singular covariance matrix, returning identity matrix")
         prewhitening_matrix = np.eye(n_channels)
 
     # apply prewhitening
@@ -83,13 +83,13 @@ def prewhiten(
 
 
 def compute_kspace_weights(
-        kr_pe=None,
-        kr_readout=None,
-        n_channels=None,
-        threshold=None,
-        var_readout=None,
-        wgt_readout_factor=2.0,
-        wgt_readout_power=0.5,
+    kr_pe=None,
+    kr_readout=None,
+    n_channels=None,
+    threshold=None,
+    var_readout=None,
+    wgt_readout_factor=2.0,
+    wgt_readout_power=0.5,
 ):
     """Compute signal weighing for a 3D Cartesian multichannel acquisision, given 2D k-space coordinates
     :param kr_pe: phase-encoding coords radius
@@ -117,7 +117,7 @@ def compute_kspace_weights(
     if isinstance(threshold, float):
         weight_readout = np.array(kr_readout > threshold, dtype=float)
     else:
-        weight_readout = 1 - np.exp(-wgt_readout_factor * kr_readout ** wgt_readout_power)
+        weight_readout = 1 - np.exp(-wgt_readout_factor * kr_readout**wgt_readout_power)
 
     weight_readout = weight_readout / np.max(weight_readout)
 
@@ -131,7 +131,7 @@ def compute_kspace_weights(
     elif isinstance(threshold, float):
         weight_pe = np.array(kr_pe > threshold, dtype=float)
     else:
-        weight_pe = 1 - np.exp(-2.5 * kr_pe ** 2)
+        weight_pe = 1 - np.exp(-2.5 * kr_pe**2)
 
     # Combine all weights
     if weight_readout.ndim == 2:
@@ -143,7 +143,7 @@ def compute_kspace_weights(
             sel_var_readout = np.array(var_readout, dtype=int) % 2 == k
             weights_all[:, sel_var_readout] = np.dot(
                 weight_readout[:, k][:, np.newaxis],
-                weight_pe[sel_var_readout][:, np.newaxis].T
+                weight_pe[sel_var_readout][:, np.newaxis].T,
             )
     else:
         # just one readout

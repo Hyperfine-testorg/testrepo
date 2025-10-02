@@ -1,4 +1,5 @@
 """Coil Combination"""
+
 import numpy as np
 import xarray as xr
 import itertools
@@ -18,8 +19,7 @@ def coil_combine(data, encoding_resolution, dims_combine=[lbl.CHAN]):
     """adaptive coil combination"""
     dims = data.dims
     dims_3d = (
-        (lbl.X, lbl.Y, lbl.Z) if lbl.X in dims else
-        (lbl.READOUT, lbl.PHASE, lbl.SLICE)
+        (lbl.X, lbl.Y, lbl.Z) if lbl.X in dims else (lbl.READOUT, lbl.PHASE, lbl.SLICE)
     )
     assert all(_ in dims for _ in dims_3d)
 
@@ -52,10 +52,13 @@ def coil_combine(data, encoding_resolution, dims_combine=[lbl.CHAN]):
     NOMINAL_RES = [12, 12, 20]  # block size in [mm]
 
     # compute the block size
-    psize = [round(r_nom/r) for (r_nom, r) in zip(NOMINAL_RES, encoding_resolution.tolist())]
+    psize = [
+        round(r_nom / r)
+        for (r_nom, r) in zip(NOMINAL_RES, encoding_resolution.tolist())
+    ]
     psize_min = [6, 6, 4]
     # size needs to be even
-    psize = [max(round(p/2)*2, p_min) for (p, p_min) in zip(psize, psize_min)]
+    psize = [max(round(p / 2) * 2, p_min) for (p, p_min) in zip(psize, psize_min)]
 
     def get_ib1map(img: np.ndarray) -> np.ndarray:
         """img (nimg_to_combine, *Nd)"""
@@ -84,9 +87,7 @@ def coil_combine(data, encoding_resolution, dims_combine=[lbl.CHAN]):
         dims=dims_combine,
     )
     # `expand_dims` undo the `squeeze` to add back singleton dimensions.
-    img_combined = img_combined.expand_dims(
-        tuple(odin-set(img_combined.dims))
-    )
+    img_combined = img_combined.expand_dims(tuple(odin - set(img_combined.dims)))
 
     return img_combined, ib1maps_xr
 
@@ -165,20 +166,26 @@ def compute_b1_adaptive(
     nd_patch = tuple((size_im[d] + step_size - 1) // step_size for d in range(3))
 
     # Extract patches (manual replacement for view_as_windows)
-    data_patches = np.zeros(nd_patch + (n_channel, np.prod(size_patch)), dtype=data_coil.dtype)
-    for ix, iy, iz in itertools.product(range(nd_patch[0]), range(nd_patch[1]), range(nd_patch[2])):
+    data_patches = np.zeros(
+        nd_patch + (n_channel, np.prod(size_patch)), dtype=data_coil.dtype
+    )
+    for ix, iy, iz in itertools.product(
+        range(nd_patch[0]), range(nd_patch[1]), range(nd_patch[2])
+    ):
         x0, y0, z0 = ix * step_size, iy * step_size, iz * step_size
         patch = data_padded[
             :,
-            x0:x0 + size_patch[0],
-            y0:y0 + size_patch[1],
-            z0:z0 + size_patch[2],
+            x0 : x0 + size_patch[0],
+            y0 : y0 + size_patch[1],
+            z0 : z0 + size_patch[2],
         ]
         data_patches[ix, iy, iz] = patch.reshape(n_channel, -1)
 
     # Compute adaptive filters
     b1_patch = np.zeros((n_channel,) + nd_patch, dtype=np.complex64)
-    for xyz_coord in itertools.product(range(nd_patch[0]), range(nd_patch[1]), range(nd_patch[2])):
+    for xyz_coord in itertools.product(
+        range(nd_patch[0]), range(nd_patch[1]), range(nd_patch[2])
+    ):
         result = _get_filter_for_patch(
             xyz_coord,
             data_patch=data_patches,
@@ -188,21 +195,26 @@ def compute_b1_adaptive(
         b1_patch[:, xyz_coord[0], xyz_coord[1], xyz_coord[2]] = result
 
     # Interpolate patch b1 to image size
-    b1_map = grid_interpn(b1_patch, size_im, method='nearest')
+    b1_map = grid_interpn(b1_patch, size_im, method="nearest")
 
-    return np.conj(b1_map)  # conjugate to be consistent with CombineCoil node definition
+    return np.conj(
+        b1_map
+    )  # conjugate to be consistent with CombineCoil node definition
 
 
 @njit([c8[::](c8[:, ::1], c8[:, ::1], c8[:, ::1])], nogil=True, cache=True)
-def get_patch_adaptive_filter(im_patch: np.ndarray, cov_noise: np.ndarray, cov_noise_inv: np.ndarray):
+def get_patch_adaptive_filter(
+    im_patch: np.ndarray, cov_noise: np.ndarray, cov_noise_inv: np.ndarray
+):
     """Computes matched filter for im_patch given noise covariance.
     :param im_patch: 2D array of dimensions (nc, nx * ny * nz), c-contigous complex64
     :param cov_noise: 2D array of dimensions (nc, nc), c-contigous complex64
     :param cov_noise_inv: matrix inverse of cov_noise, c-contigous complex64
     :return: 1D complex64
     """
-    cov_signal = np.dot(im_patch, np.conj(
-        im_patch).T)  # this is a dot product of a c-contiguous and f-contiguous matrix, but it's faster to not pre-compute the hermitian
+    cov_signal = np.dot(
+        im_patch, np.conj(im_patch).T
+    )  # this is a dot product of a c-contiguous and f-contiguous matrix, but it's faster to not pre-compute the hermitian
     eig_values, eig_basis = np.linalg.eig(np.dot(cov_noise_inv, cov_signal))
     m_opt = eig_basis[:, np.argmax(np.abs(eig_values))]
     m_opt /= np.dot(np.conj(m_opt).T, np.dot(cov_noise, m_opt))
@@ -213,22 +225,21 @@ def get_patch_adaptive_filter(im_patch: np.ndarray, cov_noise: np.ndarray, cov_n
 def grid_interpn(
     img: np.ndarray,
     Nd_out: Tuple[int, ...],
-    method: str = 'linear',
+    method: str = "linear",
 ) -> np.ndarray:
-    """Grid interpolation along the last ``len(shape_out)`` dims
-    """
+    """Grid interpolation along the last ``len(shape_out)`` dims"""
     ndim = len(Nd_out)
     Nd_xtra, Nd = img.shape[:-ndim], img.shape[-ndim:]
 
     img = img.reshape(-1, *Nd)
     nV = img.shape[0]
 
-    coords_in = tuple(np.linspace(0, _o-1, _i) for (_o, _i) in zip(Nd_out, Nd))
-    grid_out = np.stack(np.meshgrid(*(np.arange(_) for _ in Nd_out),
-                                    copy=False, indexing='ij'),
-                        axis=-1)
+    coords_in = tuple(np.linspace(0, _o - 1, _i) for (_o, _i) in zip(Nd_out, Nd))
+    grid_out = np.stack(
+        np.meshgrid(*(np.arange(_) for _ in Nd_out), copy=False, indexing="ij"), axis=-1
+    )
 
-    img_out = np.empty(shape=Nd_xtra+Nd_out, dtype=img.dtype)
+    img_out = np.empty(shape=Nd_xtra + Nd_out, dtype=img.dtype)
     img_out_view = img_out.view()
     img_out_view.shape = (nV, *Nd_out)
 
@@ -257,14 +268,13 @@ def blur(image, filter_fac=0.1):
     zvec = np.linspace(-dims[2] / 2, dims[2] / 2, dims[2])
 
     y, x, z = np.meshgrid(xvec, yvec, zvec)
-    r = np.sqrt(x ** 2 + y ** 2 + z ** 2)
+    r = np.sqrt(x**2 + y**2 + z**2)
 
     # define the k-space filter coarse
     sigma = filter_fac * np.mean(dims[0:2])  # width of blurring kernel
-    kernel = np.exp(-(r ** 2) / (2 * sigma ** 2))
+    kernel = np.exp(-(r**2) / (2 * sigma**2))
     kernel = kernel / np.max(kernel)
 
-    image_blurred = np.fft.ifftn(
-        (np.fft.fftn(image)) * np.fft.fftshift(kernel))
+    image_blurred = np.fft.ifftn((np.fft.fftn(image)) * np.fft.fftshift(kernel))
 
     return image_blurred

@@ -19,7 +19,7 @@ def xgrid(
     partial_fourier: np.ndarray,  # [r, p, s]
 ) -> xr.DataArray:
     # gridding
-    print('\nHELLO from XGrid : kdata', kdata.shape, kdata.dims)
+    print("\nHELLO from XGrid : kdata", kdata.shape, kdata.dims)
     time0 = time.time()  # time the gridding operation
 
     # if the data has a repetition dimension just take coords from the first one
@@ -31,7 +31,7 @@ def xgrid(
     coords = coords.transpose(..., lbl.ENC, lbl.COORD)
     weights = weights.transpose(..., lbl.ENC)
 
-    volume_dims = kdata.dims[:-3]           # everything except (CHAN, READOUT, ENC)
+    volume_dims = kdata.dims[:-3]  # everything except (CHAN, READOUT, ENC)
     volume_sizes = kdata.shape[:-3]
     n_channels = kdata.sizes[lbl.CHAN]
     dtype = np.complex64
@@ -56,7 +56,7 @@ def xgrid(
     # Loop over all image "volumes"
     for vol in product(*(range(n) for n in volume_sizes)):
         vol_sel = dict(zip(volume_dims, vol))
-        print(f'gridding {vol}')
+        print(f"gridding {vol}")
 
         data = kdata[vol_sel].data
         crds = coords[vol_sel].data
@@ -66,7 +66,7 @@ def xgrid(
             crds, data, wgts, res_rps, res_rps, partial_fourier, pocs_flag
         )
 
-    print('gridding took {:2.2f} seconds'.format(time.time() - time0))
+    print("gridding took {:2.2f} seconds".format(time.time() - time0))
     return img_gridded
 
 
@@ -97,7 +97,9 @@ def gridFFTRolloff(
     if pocs_flag:
         img_multichannel = pocs(kspace_multichannel, partial_fourier, fft_axes=fft_axes)
     else:
-        img_multichannel = shifted_fftn(kspace_multichannel, axes=fft_axes)  # do the readout dimension
+        img_multichannel = shifted_fftn(
+            kspace_multichannel, axes=fft_axes
+        )  # do the readout dimension
 
     # apply rolloff
     # for 2D position scan, we do 1D gridding anf no rolloff
@@ -116,7 +118,7 @@ def gridFFTRolloff(
 
     if d > 1:
         # should be (nChan, nRead, y, x)
-        assert (img_multichannel.ndim == 4)
+        assert img_multichannel.ndim == 4
 
         # Crop the image volume data to the intended specs from the pulse seq.
         # design.
@@ -125,9 +127,7 @@ def gridFFTRolloff(
 
         # Fix center crop so that it doesnt go out of bounds.
         # This fix should move into center_crop() as an option.
-        res = tuple(
-            min(d, r) for (d, r) in zip(img_multichannel.shape[-3:], imgRes)
-        )
+        res = tuple(min(d, r) for (d, r) in zip(img_multichannel.shape[-3:], imgRes))
 
         # print("res", res)
         img_multichannel = center_crop(img_multichannel, res)
@@ -163,9 +163,7 @@ def grid(
     elif crds.ndim == 2:
         N, d = crds.shape
     else:
-        raise ValueError(
-            f"Incompatible dimensionality of crds, ndim: {crds.ndim}"
-        )
+        raise ValueError(f"Incompatible dimensionality of crds, ndim: {crds.ndim}")
     crds = np.require(crds, dtype=np.float64, requirements=["C", "W"])
 
     if data is None:
@@ -182,9 +180,7 @@ def grid(
         )
 
     if data.shape[-1] != N:
-        raise ValueError(
-            f"Size mismatch of crds ({N}) and data ({data.shape[0]})"
-        )
+        raise ValueError(f"Size mismatch of crds ({N}) and data ({data.shape[0]})")
 
     # collapse all but the last dim and loop over them
     if data.ndim > 1:
@@ -263,28 +259,53 @@ def pocs(kspace_multichannel, partial_fourier, fft_axes):
     kcenter = np.zeros_like(kspace_multichannel)
 
     if partial_fourier[0] < 1:
-        kcenter[:, nonzeroind:kspace_multichannel.shape[1] - 1 - nonzeroind, :,
-                :] = kspace_multichannel[:, nonzeroind:kspace_multichannel.shape[1] - 1 - nonzeroind, :, :]
+        kcenter[:, nonzeroind : kspace_multichannel.shape[1] - 1 - nonzeroind, :, :] = (
+            kspace_multichannel[
+                :, nonzeroind : kspace_multichannel.shape[1] - 1 - nonzeroind, :, :
+            ]
+        )
         kpartial = kspace_multichannel
         img_center = shifted_fftn(kcenter, axes=fft_axes)
 
         for pocs_count in range(iterations_n):
             img_partial = shifted_fftn(kpartial, axes=fft_axes)
-            img_phased = np.exp(1j * np.angle(img_center)) * np.abs(img_partial)  # phase correct partial
+            img_phased = np.exp(1j * np.angle(img_center)) * np.abs(
+                img_partial
+            )  # phase correct partial
             kspace_phased = shifted_ifftn(img_phased, axes=fft_axes)
-            kpartial[:, kspace_multichannel.shape[1] - 1 - nonzeroind:kspace_multichannel.shape[1], :,
-                     :] = kspace_phased[:, kspace_multichannel.shape[1] - 1 - nonzeroind:kspace_multichannel.shape[1], :, :]
+            kpartial[
+                :,
+                kspace_multichannel.shape[1]
+                - 1
+                - nonzeroind : kspace_multichannel.shape[1],
+                :,
+                :,
+            ] = kspace_phased[
+                :,
+                kspace_multichannel.shape[1]
+                - 1
+                - nonzeroind : kspace_multichannel.shape[1],
+                :,
+                :,
+            ]
     else:
-        kcenter[:, :, nonzeroind:kspace_multichannel.shape[3] - 1 - nonzeroind,
-                :] = kspace_multichannel[:, :, nonzeroind:kspace_multichannel.shape[3] - 1 - nonzeroind, :]
+        kcenter[:, :, nonzeroind : kspace_multichannel.shape[3] - 1 - nonzeroind, :] = (
+            kspace_multichannel[
+                :, :, nonzeroind : kspace_multichannel.shape[3] - 1 - nonzeroind, :
+            ]
+        )
         kpartial = kspace_multichannel
         img_center = shifted_fftn(kcenter, axes=fft_axes)
 
         for pocs_count in range(iterations_n):
             img_partial = shifted_fftn(kpartial, axes=fft_axes)
-            img_phased = np.exp(1j * np.angle(img_center)) * np.abs(img_partial)  # phase correct partial
+            img_phased = np.exp(1j * np.angle(img_center)) * np.abs(
+                img_partial
+            )  # phase correct partial
             kspace_phased = shifted_ifftn(img_phased, axes=fft_axes)
-            kpartial[:, :, 0:nonzeroind + 2, :] = kspace_phased[:, :, 0:nonzeroind + 2, :]
+            kpartial[:, :, 0 : nonzeroind + 2, :] = kspace_phased[
+                :, :, 0 : nonzeroind + 2, :
+            ]
 
     if partial_fourier[1] < 1:
         rotated_partial = np.rot90(kpartial, 1, (2, 3))
@@ -310,9 +331,11 @@ def rolloff(shape: Tuple[int, ...] = (118, 118, 36)) -> np.ndarray:
     rowght = np.ones((1,), dtype=np.float64)
     rocrds = np.zeros((1, len(shape)), dtype=np.float64)
     gridded_point = grid(
-        rocrds, rodata, rowght,
+        rocrds,
+        rodata,
+        rowght,
         mtx_xy=shape[0],
-        mtx_z=shape[2] if len(shape) == 3 else 36
+        mtx_z=shape[2] if len(shape) == 3 else 36,
     )
 
     # finish the rolloff kernel by transforming to the image domain
@@ -320,7 +343,9 @@ def rolloff(shape: Tuple[int, ...] = (118, 118, 36)) -> np.ndarray:
 
     # invert so that it can be applied to grids after fft
     rolloff_mag = np.abs(rolloff)
-    rolloff = 1.0 / np.clip(np.abs(rolloff), a_min=0.2 * np.max(rolloff_mag), a_max=None)
+    rolloff = 1.0 / np.clip(
+        np.abs(rolloff), a_min=0.2 * np.max(rolloff_mag), a_max=None
+    )
 
     return rolloff
 
@@ -420,7 +445,11 @@ def threed_grid(crds, N, weights, data, data_out, mtx_xy, mtx_z):
     for n_slice in nb.prange(data.shape[0]):
         for i in nb.prange(N):
             # bounds check before gridding this coord
-            if -0.5 <= crds[i, 0] <= 0.5 and -0.5 <= crds[i, 1] <= 0.5 and -0.5 <= crds[i, 2] <= 0.5:
+            if (
+                -0.5 <= crds[i, 0] <= 0.5
+                and -0.5 <= crds[i, 1] <= 0.5
+                and -0.5 <= crds[i, 2] <= 0.5
+            ):
                 val0 = data[n_slice, i] * weights[i]
 
                 fj = (0.5 + crds[i, 1]) * dmtx_xy

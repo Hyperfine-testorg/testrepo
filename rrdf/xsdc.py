@@ -1,4 +1,3 @@
-
 from itertools import product
 
 # Third Party
@@ -21,15 +20,16 @@ def xsdc(
     weights = xr.ones_like(coords[{lbl.COORD: 0}])
 
     # get volume dimensions and sizes
-    volume_dims = [dim_name for dim_name in coords.dims if dim_name not in [lbl.COORD, lbl.ENC]]
+    volume_dims = [
+        dim_name for dim_name in coords.dims if dim_name not in [lbl.COORD, lbl.ENC]
+    ]
     volume_sizes = [coords[dim_name].size for dim_name in volume_dims]
     n_volume_dims = len(volume_dims)
 
     # compute SDC weights over existing volumes
     for items in product(*[range(volume_sizes[k]) for k in range(n_volume_dims)]):
         # get volume indices
-        vol_dim_sel = {volume_dims[k]: int(items[k])
-                       for k in range(n_volume_dims)}
+        vol_dim_sel = {volume_dims[k]: int(items[k]) for k in range(n_volume_dims)}
         # computer SDC weights
         weights[vol_dim_sel] = sdc(
             coords[vol_dim_sel].transpose(lbl.ENC, lbl.COORD).data,
@@ -88,8 +88,8 @@ def kernel_2d(kernel_len):
     kernel = np.empty(kernel_len, dtype=np.float64)
     for i in range(kernel_len):
         x = i / kernel_len
-        x2 = x ** 2
-        x4 = x2 ** 2
+        x2 = x**2
+        x4 = x2**2
         x3 = x * x2
         x5 = x * x4
         kernel[i] = c0 + (c1 * x) + (c2 * x2) + (c3 * x3) + (c4 * x4) + (c5 * x5)
@@ -110,8 +110,8 @@ def kernel_3d(kernel_len):
     kernel = np.empty(kernel_len, dtype=np.float64)
     for i in range(kernel_len):
         x = i / kernel_len
-        x2 = x ** 2
-        x4 = x2 ** 2
+        x2 = x**2
+        x4 = x2**2
         x3 = x * x2
         x5 = x * x4
         kernel[i] = c0 + (c1 * x) + (c2 * x2) + (c3 * x3) + (c4 * x4) + (c5 * x5)
@@ -130,7 +130,7 @@ def oned_sdc(crds, N, mtx_xy, numiter, taper0, sdc):
     taper = np.empty(N, dtype=np.float64)
     maxcrd = 0
     for i in range(N):
-        if (np.abs(crds[i]) > maxcrd):
+        if np.abs(crds[i]) > maxcrd:
             maxcrd = np.abs(crds[i])
 
     crdedge = (1 - taper0) * maxcrd
@@ -174,7 +174,7 @@ def oned_sdc(crds, N, mtx_xy, numiter, taper0, sdc):
                 dx = np.abs(crds[i] - ii)
                 ki = int(np.floor(knorm * dx))
                 sdcdenom += cmtx[ii] * kernel[ki]
-            if (sdcdenom > 0):
+            if sdcdenom > 0:
                 sdc[i] *= taper[i] / sdcdenom
 
     return 0
@@ -185,7 +185,7 @@ def twod_sdc(crds, N, mtx_xy, numiter, taper0, sdc):
     # make the kernel
     kernel_len = 1000
     krad = 1.5 * 1.65  # = 2.475, kernel radius in cmtx coordinates
-    krad_sq = krad ** 2
+    krad_sq = krad**2
     knorm = kernel_len / krad
     kernel = kernel_2d(kernel_len)
 
@@ -195,7 +195,7 @@ def twod_sdc(crds, N, mtx_xy, numiter, taper0, sdc):
     radius_sq = 0.0
     for i in range(N):
         radius_sq = crds[i, 0] * crds[i, 0] + crds[i, 1] * crds[i, 1]
-        if (radius_sq > maxcrd):
+        if radius_sq > maxcrd:
             maxcrd = radius_sq
     maxcrd = np.sqrt(maxcrd)
 
@@ -205,7 +205,7 @@ def twod_sdc(crds, N, mtx_xy, numiter, taper0, sdc):
     crdedge_sq = crdedge * crdedge
     for i in range(N):
         radius_sq = crds[i, 0] ** 2 + crds[i, 1] ** 2
-        if (radius_sq > crdedge_sq):
+        if radius_sq > crdedge_sq:
             crdmag = np.sqrt(radius_sq)
             taper[i] = (maxcrd - crdmag) * crdnorm
         else:
@@ -232,10 +232,10 @@ def twod_sdc(crds, N, mtx_xy, numiter, taper0, sdc):
             jj1 = int(np.floor(crds[i, 1] + krad))
             for ii in range(ii0, ii1 + 1):
                 dx = np.abs(crds[i, 0] - ii)
-                dx_sq = dx ** 2
+                dx_sq = dx**2
                 for jj in range(jj0, jj1 + 1):
                     dy = np.abs(crds[i, 1] - jj)
-                    dy_sq = dy ** 2
+                    dy_sq = dy**2
                     rad_sq = dx_sq + dy_sq
                     if rad_sq < krad_sq:
                         ki = int(np.floor(knorm * np.sqrt(rad_sq)))
@@ -250,15 +250,15 @@ def twod_sdc(crds, N, mtx_xy, numiter, taper0, sdc):
             jj1 = int(np.floor(crds[i, 1] + krad))
             for ii in range(ii0, ii1 + 1):
                 dx = np.abs(crds[i, 0] - ii)
-                dx_sq = dx ** 2
+                dx_sq = dx**2
                 for jj in range(jj0, jj1 + 1):
                     dy = np.abs(crds[i, 1] - jj)
-                    dy_sq = dy ** 2
+                    dy_sq = dy**2
                     rad_sq = dx_sq + dy_sq
                     if rad_sq < krad_sq:
                         ki = int(np.floor(knorm * np.sqrt(rad_sq)))
                         sdcdenom += cmtx[ii, jj] * kernel[ki]
-            if (sdcdenom > 0):
+            if sdcdenom > 0:
                 sdc[i] *= taper[i] / sdcdenom
 
     return 0
@@ -269,7 +269,7 @@ def threed_sdc(crds, N, mtx_xy, mtx_z, numiter, taper0, kradscale, sdc):
     # make the kernel
     kernel_len = 1000
     krad = kradscale * 1.93
-    krad_sq = krad ** 2
+    krad_sq = krad**2
     knorm = kernel_len / krad
     kernel = kernel_3d(kernel_len)
 
@@ -279,17 +279,17 @@ def threed_sdc(crds, N, mtx_xy, mtx_z, numiter, taper0, kradscale, sdc):
     radius_sq = 0.0
     for i in range(N):
         radius_sq = crds[i, 0] ** 2 + crds[i, 1] ** 2 + crds[i, 2] ** 2
-        if (radius_sq > maxcrd):
+        if radius_sq > maxcrd:
             maxcrd = radius_sq
     maxcrd = np.sqrt(maxcrd)
 
     crdedge = (1 - taper0) * maxcrd
     crdnorm = 1.0 / (maxcrd - crdedge) if taper0 > 0.0 else 0.0
 
-    crdedge_sq = crdedge ** 2
+    crdedge_sq = crdedge**2
     for i in range(N):
         radius_sq = crds[i, 0] ** 2 + crds[i, 1] ** 2 + crds[i, 2] ** 2
-        if (radius_sq > crdedge_sq):
+        if radius_sq > crdedge_sq:
             crdmag = np.sqrt(radius_sq)
             taper[i] = (maxcrd - crdmag) * crdnorm
         else:
@@ -323,20 +323,20 @@ def threed_sdc(crds, N, mtx_xy, mtx_z, numiter, taper0, kradscale, sdc):
 
             for jj in range(jj0, jj1 + 1):
                 dy = crds[i, 1] - jj
-                dy_sq[jj - jj0] = dy ** 2
+                dy_sq[jj - jj0] = dy**2
             for kk in range(kk0, kk1 + 1):
                 dz = crds[i, 2] - kk
-                dz_sq[kk - kk0] = dz ** 2
+                dz_sq[kk - kk0] = dz**2
 
             for ii in range(ii0, ii1 + 1):
                 dx = np.abs(crds[i, 0] - ii)
-                dx_sq = dx ** 2
+                dx_sq = dx**2
                 for jj in range(jj0, jj1 + 1):
-                    if (dx_sq + dy_sq[jj - jj0] >= krad_sq):
+                    if dx_sq + dy_sq[jj - jj0] >= krad_sq:
                         continue
                     for kk in range(kk0, kk1 + 1):
                         rad_sq = dx_sq + dy_sq[jj - jj0] + dz_sq[kk - kk0]
-                        if (rad_sq < krad_sq):
+                        if rad_sq < krad_sq:
                             ki = int(np.floor(knorm * np.sqrt(rad_sq)))
                             cmtx[ii, jj, kk] += sdc[i] * kernel[ki]
 
@@ -352,23 +352,23 @@ def threed_sdc(crds, N, mtx_xy, mtx_z, numiter, taper0, kradscale, sdc):
 
             for jj in range(jj0, jj1 + 1):
                 dy = crds[i, 1] - jj
-                dy_sq[jj - jj0] = dy ** 2
+                dy_sq[jj - jj0] = dy**2
             for kk in range(kk0, kk1 + 1):
                 dz = crds[i, 2] - kk
-                dz_sq[kk - kk0] = dz ** 2
+                dz_sq[kk - kk0] = dz**2
 
             for ii in range(ii0, ii1 + 1):
                 dx = np.abs(crds[i, 0] - ii)
-                dx_sq = dx ** 2
+                dx_sq = dx**2
                 for jj in range(jj0, jj1 + 1):
-                    if (dx_sq + dy_sq[jj - jj0] >= krad_sq):
+                    if dx_sq + dy_sq[jj - jj0] >= krad_sq:
                         continue
                     for kk in range(kk0, kk1 + 1):
                         rad_sq = dx_sq + dy_sq[jj - jj0] + dz_sq[kk - kk0]
-                        if (rad_sq < krad_sq):
+                        if rad_sq < krad_sq:
                             ki = int(np.floor(knorm * np.sqrt(rad_sq)))
                             sdcdenom += cmtx[ii, jj, kk] * kernel[ki]
-            if (sdcdenom > 0):
+            if sdcdenom > 0:
                 sdc[i] *= taper[i] / sdcdenom
 
     return 0

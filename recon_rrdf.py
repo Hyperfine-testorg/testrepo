@@ -50,7 +50,9 @@ from recon_rrdf.lib.coil_combine import coil_combine
 def main():
     """python3 recon_rrdf.py filename_rrdf_.h5"""
     parser = argparse.ArgumentParser(description="Reconstruct RRDF data")
-    parser.add_argument("filename", type=str, help="Input HDF5 filename (inside ./data directory)")
+    parser.add_argument(
+        "filename", type=str, help="Input HDF5 filename (inside ./data directory)"
+    )
     args = parser.parse_args()
 
     base_dir = Path(__file__).resolve().parent
@@ -66,7 +68,9 @@ def main():
 
     # ---------------------
     # load data and coordinates from h5 file
-    raw_data, coords2d, data_drift, rrdf = rd.read_rrdf(fn)  # raw_data is an xarray. can convert to numpy array by doing raw_data.data
+    raw_data, coords2d, data_drift, rrdf = rd.read_rrdf(
+        fn
+    )  # raw_data is an xarray. can convert to numpy array by doing raw_data.data
     print(f"Raw data shape: {raw_data.shape} = [coils, read, odd/even echoes, lines]")
     print(
         f"Coords2D shape: {coords2d.shape} = [dims, lines, odd/even echos], "
@@ -74,25 +78,37 @@ def main():
     )
 
     # Imaging parameters
-    imsize = rrdf['sequence']['matrix_size']  # [r p s]
-    partial_fourier = rrdf['sequence']['partial_fourier']  # [r p s], 0-1, where 1 = fully sampled dimension
+    imsize = rrdf["sequence"]["matrix_size"]  # [r p s]
+    partial_fourier = rrdf["sequence"][
+        "partial_fourier"
+    ]  # [r p s], 0-1, where 1 = fully sampled dimension
 
     # ---------------------
     # Sample density compensation
-    print('\nComputing Sample density compensation weights')
+    print("\nComputing Sample density compensation weights")
     sdc_weights = xsdc(coords2d, imsize)
-    print(f'Sample density compensation weights are [lines, odd/even echoes] {sdc_weights.shape}')
+    print(
+        f"Sample density compensation weights are [lines, odd/even echoes] {sdc_weights.shape}"
+    )
 
     # ---------------------
     # Prewhitening
-    print('\nComputing and applying prewhitening matrix')
+    print("\nComputing and applying prewhitening matrix")
     raw_data = prewhiten(raw_data, coords2d)
 
     # ---------------------
     # NUFFT reconstruction
-    print(f'\nReconstructing images with NUFFT, matrix size [r, p, s] = {imsize}')
-    image = xgrid(kdata=raw_data, coords=coords2d, weights=sdc_weights, res=imsize, partial_fourier=partial_fourier)
-    print(f'Image data pre-coil combine has size {image.shape}, {image.dims}')  # [coils read phase slice odd/even echoes]
+    print(f"\nReconstructing images with NUFFT, matrix size [r, p, s] = {imsize}")
+    image = xgrid(
+        kdata=raw_data,
+        coords=coords2d,
+        weights=sdc_weights,
+        res=imsize,
+        partial_fourier=partial_fourier,
+    )
+    print(
+        f"Image data pre-coil combine has size {image.shape}, {image.dims}"
+    )  # [coils read phase slice odd/even echoes]
 
     # Odd/even image registration (not implemented)
     # Do an initial coil combination for each of the odd/even echo parity imaages,
@@ -100,13 +116,19 @@ def main():
 
     # ---------------------
     # Receive coil combination (not best coil combination, just using this method here bc its simple)
-    print('\nCombining coils using 3D adaptive filtering')
-    encoding_resolution = rrdf['sequence']['resolution']
-    image, b1maps = coil_combine(image, encoding_resolution=encoding_resolution, dims_combine=[lbl.CHAN])
+    print("\nCombining coils using 3D adaptive filtering")
+    encoding_resolution = rrdf["sequence"]["resolution"]
+    image, b1maps = coil_combine(
+        image, encoding_resolution=encoding_resolution, dims_combine=[lbl.CHAN]
+    )
     image = image.transpose(lbl.READOUT, lbl.PHASE, lbl.SLICE, lbl.ECHO)
 
-    print(f'Images following coil combination: {image.shape}, {image.dims}')  # [coils read phase slice odd/even echoes]
-    print(f'Receive b1 maps following coil combination: {b1maps.shape}, {b1maps.dims}')  # [coils read phase slice odd/even echoes]
+    print(
+        f"Images following coil combination: {image.shape}, {image.dims}"
+    )  # [coils read phase slice odd/even echoes]
+    print(
+        f"Receive b1 maps following coil combination: {b1maps.shape}, {b1maps.dims}"
+    )  # [coils read phase slice odd/even echoes]
 
 
 if __name__ == "__main__":
