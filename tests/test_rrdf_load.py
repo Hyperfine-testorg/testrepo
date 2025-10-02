@@ -31,7 +31,6 @@ def file_path():
     return get_test_file_path()
 
 
-@pytest.mark.lfs
 def test_load_dict_from_h5(file_path):
     """
     Test loading a dictionary from an HDF5 file. outside pyHFS context.
@@ -59,7 +58,6 @@ def test_load_dict_from_h5(file_path):
         )
 
 
-@pytest.mark.lfs
 def test_recon_from_rrdf(file_path):
     """
     Test loading RRDF and reconstructing image outide pyHFS context.
