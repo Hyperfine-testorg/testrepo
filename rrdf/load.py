@@ -2,11 +2,12 @@
 Load RRDF (research raw data format) data from HDF5 files.
 """
 
-import xarray as xr
-import numpy as np
 import glob
-import h5py
 from enum import Enum
+
+import h5py
+import numpy as np
+import xarray as xr
 
 
 def file_path():
