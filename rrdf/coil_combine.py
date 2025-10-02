@@ -1,21 +1,25 @@
 """Coil Combination"""
 
+import itertools
+from collections.abc import Sequence
+from math import prod
+
 import numpy as np
 import xarray as xr
-import itertools
-
-from math import prod
-from typing import Tuple
-from scipy.interpolate import interpn
 from numba import (
     c8,
     njit,
 )
+from scipy.interpolate import interpn
 
-from recon_rrdf.lib.rrdf_load import ArrayLabels as lbl
+from rrdf.load import ArrayLabels as lbl
 
 
-def coil_combine(data, encoding_resolution, dims_combine=[lbl.CHAN]):
+def coil_combine(
+    data: xr.DataArray,
+    encoding_resolution: tuple,
+    dims_combine: Sequence[lbl] = (lbl.CHAN,),
+) -> tuple[xr.DataArray, xr.DataArray]:
     """adaptive coil combination"""
     dims = data.dims
     dims_3d = (
@@ -54,11 +58,14 @@ def coil_combine(data, encoding_resolution, dims_combine=[lbl.CHAN]):
     # compute the block size
     psize = [
         round(r_nom / r)
-        for (r_nom, r) in zip(NOMINAL_RES, encoding_resolution.tolist())
+        for (r_nom, r) in zip(NOMINAL_RES, encoding_resolution, strict=False)
     ]
     psize_min = [6, 6, 4]
     # size needs to be even
-    psize = [max(round(p / 2) * 2, p_min) for (p, p_min) in zip(psize, psize_min)]
+    psize = [
+        max(round(p / 2) * 2, p_min)
+        for (p, p_min) in zip(psize, psize_min, strict=False)
+    ]
 
     def get_ib1map(img: np.ndarray) -> np.ndarray:
         """img (nimg_to_combine, *Nd)"""
@@ -224,7 +231,7 @@ def get_patch_adaptive_filter(
 
 def grid_interpn(
     img: np.ndarray,
-    Nd_out: Tuple[int, ...],
+    Nd_out: tuple[int, ...],
     method: str = "linear",
 ) -> np.ndarray:
     """Grid interpolation along the last ``len(shape_out)`` dims"""
@@ -234,7 +241,9 @@ def grid_interpn(
     img = img.reshape(-1, *Nd)
     nV = img.shape[0]
 
-    coords_in = tuple(np.linspace(0, _o - 1, _i) for (_o, _i) in zip(Nd_out, Nd))
+    coords_in = tuple(
+        np.linspace(0, _o - 1, _i) for (_o, _i) in zip(Nd_out, Nd, strict=False)
+    )
     grid_out = np.stack(
         np.meshgrid(*(np.arange(_) for _ in Nd_out), copy=False, indexing="ij"), axis=-1
     )
