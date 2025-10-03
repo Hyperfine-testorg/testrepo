@@ -20,4 +20,7 @@ dependencies = [
 [dependency-groups]
 dev = [
     "pytest>=8.4.2",
+    "ruff>=0.8.0",
+    "mypy>=1.11.0",
+    "scipy-stubs>=1.16.2.0",
 ]
