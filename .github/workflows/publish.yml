@@ -31,4 +31,5 @@ jobs:
             --username ${USERNAME}
             --password ${PASSWORD}
             *.whl
+            rrdf-${{ inputs.tag }}-py3-none-any.whl
             
