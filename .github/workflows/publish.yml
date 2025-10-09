@@ -20,6 +20,7 @@ jobs:
         with:
             fileName: '*.whl'
             tag: ${{ inputs.tag }}
+            out-file-path: "dist"
       - name: Publish package
         env:
           USERNAME: ${{ secrets.DEVPI_USERNAME }}
@@ -29,5 +30,5 @@ jobs:
             --publish-url https://devpi.hyperfine-research.com \
             --username "$USERNAME" \
             --password "$PASSWORD" \
-            *.whl
+            dist/*.whl
             
