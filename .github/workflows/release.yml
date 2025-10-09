@@ -2,172 +2,45 @@ name: Release
 
 on:
   push:
-    tags:
-      - 'v[0-9]+.[0-9]+.[0-9]+'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version number (e.g., 0.0.2 - without the v prefix)'
-        required: true
-        type: string
+    branches:
+      - main
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
 
 jobs:
-  build-and-release:
+  release:
     runs-on: ubuntu-latest
+    concurrency: release
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Fetch all history to check branch
-
-      - name: Verify tag is on main branch
-        if: github.event_name == 'push'
-        run: |
-          # Check if the current tag points to a commit that's on main
-          git fetch origin main
-          TAG_COMMIT=$(git rev-list -n 1 $GITHUB_REF_NAME)
-          if ! git merge-base --is-ancestor $TAG_COMMIT origin/main; then
-            echo "Error: Tag $GITHUB_REF_NAME is not on the main branch"
-            exit 1
-          fi
-          echo "✓ Tag $GITHUB_REF_NAME is on main branch"
-
-      - name: Verify manual trigger is from main branch
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          # For manual triggers, ensure we're on main
-          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
-          if [ "$CURRENT_BRANCH" != "main" ]; then
-            echo "Error: Manual releases can only be triggered from the main branch"
-            echo "Current branch: $CURRENT_BRANCH"
-            exit 1
-          fi
-          echo "✓ Running on main branch"
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.10'
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+      - name: Install Python Semantic Release
+        run: pip install python-semantic-release
 
-      - name: Extract version from tag
-        id: get_version
-        run: |
-          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
-            # Manual trigger - use the input version
-            VERSION="${{ github.event.inputs.version }}"
-            TAG_NAME="v$VERSION"
-          else
-            # Tag push - extract from tag name
-            TAG_NAME="$GITHUB_REF_NAME"
-            VERSION=${GITHUB_REF_NAME#v}
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
-          echo "Version: $VERSION"
-          echo "Tag: $TAG_NAME"
-
-      - name: Check if release already exists
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          TAG_NAME="${{ steps.get_version.outputs.tag_name }}"
-          
-          # Check if the release already exists
-          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
-            -H "Authorization: Bearer $GITHUB_TOKEN" \
-            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME")
-          
-          if [ "$HTTP_CODE" == "200" ]; then
-            echo "❌ Error: Release $TAG_NAME already exists!"
-            echo "View it at: https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
-            exit 1
-          else
-            echo "✓ Release $TAG_NAME does not exist yet. Proceeding..."
-          fi
-
-      - name: Create tag if manual trigger
-        if: github.event_name == 'workflow_dispatch'
-        run: |
-          TAG_NAME="${{ steps.get_version.outputs.tag_name }}"
-          
-          # Check if tag already exists
-          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
-            echo "❌ Error: Tag $TAG_NAME already exists!"
-            exit 1
-          fi
-          
-          # Create and push the tag
-          git tag "$TAG_NAME"
-          git push origin "$TAG_NAME"
-          echo "✓ Created and pushed tag $TAG_NAME"
-
-      - name: Update version in pyproject.toml
-        run: |
-          VERSION="${{ steps.get_version.outputs.version }}"
-          # Update the version field in pyproject.toml using a different delimiter
-          sed -i "s|^version = .*|version = \"$VERSION\"|" pyproject.toml
-          
-          # Show the change
-          echo "Updated pyproject.toml:"
-          grep "^version = " pyproject.toml
-
-      - name: Build wheel
-        run: |
-          uv build
-
-      - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Python Semantic Release
+        id: release
+        uses: python-semantic-release/python-semantic-release@v9.15.2
         with:
-          tag_name: ${{ steps.get_version.outputs.tag_name }}
-          release_name: Release ${{ steps.get_version.outputs.tag_name }}
-          body: |
-            Release ${{ steps.get_version.outputs.tag_name }}
-            
-            ## Installation
-            
-            ```bash
-            pip install rrdf-${{ steps.get_version.outputs.version }}-py3-none-any.whl
-            ```
-            
-            ## Changes
-            
-            See the [commit history](https://github.com/${{ github.repository }}/commits/${{ steps.get_version.outputs.tag_name }}) for details.
-          draft: false
-          prerelease: false
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          root_options: "-vv"
 
-      - name: Upload wheel to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish package distributions to GitHub Releases
+        uses: python-semantic-release/upload-to-gh-release@main
+        if: steps.release.outputs.released == 'true'
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/rrdf-${{ steps.get_version.outputs.version }}-py3-none-any.whl
-          asset_name: rrdf-${{ steps.get_version.outputs.version }}-py3-none-any.whl
-          asset_content_type: application/zip
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          tag: ${{ steps.release.outputs.tag }}
 
-      - name: Upload source distribution to release
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: ./dist/rrdf-${{ steps.get_version.outputs.version }}.tar.gz
-          asset_name: rrdf-${{ steps.get_version.outputs.version }}.tar.gz
-          asset_content_type: application/gzip
-
-      - name: Commit version update
-        run: |
-          git config --local user.email "github-actions[bot]@users.noreply.github.com"
-          git config --local user.name "github-actions[bot]"
-          git add pyproject.toml
-          git commit -m "chore: bump version to ${{ steps.get_version.outputs.version }}" || echo "No changes to commit"
-          git push origin HEAD:main || echo "Could not push to main"
