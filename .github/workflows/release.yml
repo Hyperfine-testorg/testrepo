@@ -29,15 +29,15 @@ jobs:
         id: get_version
         run: |
           # Remove 'v' prefix from tag (e.g., v1.2.3 -> 1.2.3)
-          VERSION=${GITHUB_REF#refs/tags/v}
+          VERSION=${GITHUB_REF_NAME#v}
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
       - name: Update version in pyproject.toml
         run: |
-          VERSION=${{ steps.get_version.outputs.version }}
-          # Update the version field in pyproject.toml
-          sed -i "s/^version = .*/version = \"$VERSION\"/" pyproject.toml
+          VERSION="${{ steps.get_version.outputs.version }}"
+          # Update the version field in pyproject.toml using a different delimiter
+          sed -i "s|^version = .*|version = \"$VERSION\"|" pyproject.toml
           
           # Show the change
           echo "Updated pyproject.toml:"
