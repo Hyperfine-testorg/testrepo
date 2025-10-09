@@ -4,8 +4,6 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-    branches:
-      - main
 
 permissions:
   contents: write
@@ -16,6 +14,19 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to check branch
+
+      - name: Verify tag is on main branch
+        run: |
+          # Check if the current tag points to a commit that's on main
+          git fetch origin main
+          TAG_COMMIT=$(git rev-list -n 1 $GITHUB_REF_NAME)
+          if ! git merge-base --is-ancestor $TAG_COMMIT origin/main; then
+            echo "Error: Tag $GITHUB_REF_NAME is not on the main branch"
+            exit 1
+          fi
+          echo "✓ Tag $GITHUB_REF_NAME is on main branch"
 
       - name: Set up Python
         uses: actions/setup-python@v5
