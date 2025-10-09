@@ -29,5 +29,5 @@ jobs:
             --publish-url https://devpi.hyperfine-research.com \
             --username "$USERNAME" \
             --password "$PASSWORD" \
-            $GITHUB_WORKSPACE/rrdf-${{ inputs.tag }}-py3-none-any.whl
+            *.whl
             
