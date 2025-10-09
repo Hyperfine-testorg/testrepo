@@ -22,14 +22,12 @@ jobs:
             tag: ${{ inputs.tag }}
       - name: Publish package
         env:
-          PUBLISH_URL: ${{ secrets.PUBLISH_URL }}
-          USERNAME: ${{ secrets.POETRY_HTTP_BASIC_DEVPI_USERNAME }}
-          PASSWORD: ${{ secrets.POETRY_HTTP_BASIC_DEVPI_PASSWORD }}
+          USERNAME: ${{ secrets.DEVPI_USERNAME }}
+          PASSWORD: ${{ secrets.DEVPI_PASSWORD }}
         run: |
           uv publish
-            --publish-url ${PUBLISH_URL}
-            --username ${USERNAME}
-            --password ${PASSWORD}
-            *.whl
+            --publish-url https://devpi.hyperfine-research.com \
+            --username "$USERNAME" \
+            --password "$PASSWORD" \
             rrdf-${{ inputs.tag }}-py3-none-any.whl
             
