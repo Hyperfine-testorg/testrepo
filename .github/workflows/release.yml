@@ -5,19 +5,12 @@ on:
   push:
     tags:
        - "v*.*.*"
-  # Allow manual triggering
-  workflow_dispatch:  
-    inputs:
-      tag:
-        description: 'Tag to release e.g. v1.7.2'
-        required: true
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
       contents: write  # required to create GitHub releases
-
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
