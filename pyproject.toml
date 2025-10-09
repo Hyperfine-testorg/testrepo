@@ -1,10 +1,10 @@
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling", "hatch-vcs"]
 build-backend = "hatchling.build"
 
 [project]
 name = "rrdf"
-version = "1.0.0"
+dynamic = ["version"]
 description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -25,16 +25,5 @@ dev = [
     "scipy-stubs>=1.15.3.0",
 ]
 
-[tool.semantic_release]
-version_toml = ["pyproject.toml:project.version"]
-build_command = "uv build"
-
-# [tool.semantic_release.commit_parser_options]
-# allowed_tags = ["feat", "fix", "docs", "style", "refactor", "perf", "test", "chore", "ci", "build"]
-# minor_tags = ["feat"]
-# patch_tags = ["fix", "perf"]
-
-[tool.semantic_release.changelog]
-template_dir = "templates"
-# changelog_file = "CHANGELOG.md"
-exclude_commit_patterns = []
+[tool.hatch.version]
+source = "vcs"
