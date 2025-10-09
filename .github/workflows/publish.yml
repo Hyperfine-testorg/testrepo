@@ -1,0 +1,34 @@
+name: Publish to Hyperfine's internal Python index
+
+on: 
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Tag to publish, e.g. v1.0.0'
+        required: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
+        with:
+          version: "latest"
+      - name: Download .whl from GitHub release
+        uses: robinraju/release-downloader@v1
+        with:
+            fileName: '*.whl'
+            tag: ${{ inputs.tag }}
+      - name: Publish package
+        env:
+          PUBLISH_URL: ${{ secrets.PUBLISH_URL }}
+          USERNAME: ${{ secrets.POETRY_HTTP_BASIC_DEVPI_USERNAME }}
+          PASSWORD: ${{ secrets.POETRY_HTTP_BASIC_DEVPI_PASSWORD }}
+        run: |
+          uv publish
+            --publish-url ${PUBLISH_URL}
+            --username ${USERNAME}
+            --password ${PASSWORD}
+            *.whl
+            
