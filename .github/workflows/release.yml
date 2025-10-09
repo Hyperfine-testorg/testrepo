@@ -4,6 +4,12 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 0.0.2 - without the v prefix)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -18,6 +24,7 @@ jobs:
           fetch-depth: 0  # Fetch all history to check branch
 
       - name: Verify tag is on main branch
+        if: github.event_name == 'push'
         run: |
           # Check if the current tag points to a commit that's on main
           git fetch origin main
@@ -27,6 +34,18 @@ jobs:
             exit 1
           fi
           echo "✓ Tag $GITHUB_REF_NAME is on main branch"
+
+      - name: Verify manual trigger is from main branch
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          # For manual triggers, ensure we're on main
+          CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+          if [ "$CURRENT_BRANCH" != "main" ]; then
+            echo "Error: Manual releases can only be triggered from the main branch"
+            echo "Current branch: $CURRENT_BRANCH"
+            exit 1
+          fi
+          echo "✓ Running on main branch"
 
       - name: Set up Python
         uses: actions/setup-python@v5
@@ -39,10 +58,54 @@ jobs:
       - name: Extract version from tag
         id: get_version
         run: |
-          # Remove 'v' prefix from tag (e.g., v1.2.3 -> 1.2.3)
-          VERSION=${GITHUB_REF_NAME#v}
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            # Manual trigger - use the input version
+            VERSION="${{ github.event.inputs.version }}"
+            TAG_NAME="v$VERSION"
+          else
+            # Tag push - extract from tag name
+            TAG_NAME="$GITHUB_REF_NAME"
+            VERSION=${GITHUB_REF_NAME#v}
+          fi
           echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag_name=$TAG_NAME" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
+          echo "Tag: $TAG_NAME"
+
+      - name: Check if release already exists
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          TAG_NAME="${{ steps.get_version.outputs.tag_name }}"
+          
+          # Check if the release already exists
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer $GITHUB_TOKEN" \
+            "https://api.github.com/repos/${{ github.repository }}/releases/tags/$TAG_NAME")
+          
+          if [ "$HTTP_CODE" == "200" ]; then
+            echo "❌ Error: Release $TAG_NAME already exists!"
+            echo "View it at: https://github.com/${{ github.repository }}/releases/tag/$TAG_NAME"
+            exit 1
+          else
+            echo "✓ Release $TAG_NAME does not exist yet. Proceeding..."
+          fi
+
+      - name: Create tag if manual trigger
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          TAG_NAME="${{ steps.get_version.outputs.tag_name }}"
+          
+          # Check if tag already exists
+          if git rev-parse "$TAG_NAME" >/dev/null 2>&1; then
+            echo "❌ Error: Tag $TAG_NAME already exists!"
+            exit 1
+          fi
+          
+          # Create and push the tag
+          git tag "$TAG_NAME"
+          git push origin "$TAG_NAME"
+          echo "✓ Created and pushed tag $TAG_NAME"
 
       - name: Update version in pyproject.toml
         run: |
@@ -64,10 +127,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          tag_name: ${{ github.ref_name }}
-          release_name: Release ${{ github.ref_name }}
+          tag_name: ${{ steps.get_version.outputs.tag_name }}
+          release_name: Release ${{ steps.get_version.outputs.tag_name }}
           body: |
-            Release ${{ github.ref_name }}
+            Release ${{ steps.get_version.outputs.tag_name }}
             
             ## Installation
             
@@ -77,7 +140,7 @@ jobs:
             
             ## Changes
             
-            See the [commit history](https://github.com/${{ github.repository }}/commits/${{ github.ref_name }}) for details.
+            See the [commit history](https://github.com/${{ github.repository }}/commits/${{ steps.get_version.outputs.tag_name }}) for details.
           draft: false
           prerelease: false
 
