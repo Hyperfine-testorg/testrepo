@@ -26,5 +26,9 @@ jobs:
           USERNAME: ${{ secrets.DEVPI_USERNAME }}
           PASSWORD: ${{ secrets.DEVPI_PASSWORD }}
         run:
-          uv publish --publish-url https://devpi.hyperfine-research.com --username "$USERNAME" --password "$PASSWORD" dist/*.whl
+          uv publish \
+            --publish-url https://devpi.hyperfine-research.com \
+            --username "$USERNAME" \
+            --password "$PASSWORD" \
+            dist/*.whl
             
