@@ -118,7 +118,7 @@ def kernel_3d(kernel_len):
     return kernel
 
 
-@nb.njit(cache=True)
+# @nb.njit(cache=True)
 def oned_sdc(crds, N, mtx_xy, numiter, taper0, sdc):
     # make the kernel
     kernel_len = 1000

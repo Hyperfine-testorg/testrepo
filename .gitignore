@@ -1,1 +1,5 @@
 __pycache__
+
+# recon outputs
+data/**/*.npy
+data/**/*.png

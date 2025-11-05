@@ -35,17 +35,17 @@ The output from this script is going to look worse than our product image recons
 
 """
 
-import argparse
 from pathlib import Path
-
 import numpy as np
+import argparse
 
 import rrdf.load as rd
-from rrdf.coil_combine import coil_combine
+from rrdf.xsdc import xsdc
+from rrdf.xgrid import xgrid
+from rrdf.save_images import write_png, numpy_save, flip_image
 from rrdf.load import ArrayLabels as lbl
 from rrdf.prewhiten import prewhiten
-from rrdf.xgrid import xgrid
-from rrdf.xsdc import xsdc
+from rrdf.coil_combine import coil_combine
 
 
 def main():
@@ -66,13 +66,16 @@ def main():
     if not fn.exists():
         raise FileNotFoundError(f"File not found: {fn}")
     print(f"Loading data from {fn}")
+    # Base output filename without extension
+    base_name = fn.stem  # strips ".h5"
 
     # ---------------------
     # load data and coordinates from h5 file
-    raw_data, coords2d, data_drift, rrdf = rd.read_rrdf(
+    raw_data, coords2d, data_drift, rrdf, is_deepdish = rd.read_rrdf(
         fn
     )  # raw_data is an xarray. can convert to numpy array by doing raw_data.data
     print(f"Raw data shape: {raw_data.shape} = [coils, read, odd/even echoes, lines]")
+    print(f"Navigator data shape: {data_drift.shape} = [coils, read, lines]")
     print(
         f"Coords2D shape: {coords2d.shape} = [dims, lines, odd/even echos], "
         f"scaled between {np.min(coords2d.data)} and {np.max(coords2d.data)}"
@@ -80,13 +83,19 @@ def main():
 
     # Imaging parameters
     imsize = rrdf["sequence"]["matrix_size"]  # [r p s]
+    if is_deepdish:  # pre- 11 software
+        imsize = rd.get_nparray_dd(imsize)
+
     partial_fourier = rrdf["sequence"][
         "partial_fourier"
     ]  # [r p s], 0-1, where 1 = fully sampled dimension
+    if is_deepdish:  # pre- 11 software
+        partial_fourier = rd.get_nparray_dd(partial_fourier)
 
     # ---------------------
     # Sample density compensation
     print("\nComputing Sample density compensation weights")
+    print(f"imsize {imsize}")
     sdc_weights = xsdc(coords2d, imsize)
     print(
         f"Sample density compensation weights are [lines, odd/even echoes] {sdc_weights.shape}"
@@ -111,6 +120,16 @@ def main():
         f"Image data pre-coil combine has size {image.shape}, {image.dims}"
     )  # [coils read phase slice odd/even echoes]
 
+    # uncomment to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
+    numpy_save(
+        image,
+        data_dir,
+        base_name,
+        tag="image_coils",
+        complex_out=True,
+        real_imag_separate=True,
+    )
+
     # Odd/even image registration (not implemented)
     # Do an initial coil combination for each of the odd/even echo parity imaages,
     # then compute and apply a nonrigid 3D registration between odd/even echoes (example)
@@ -119,9 +138,12 @@ def main():
     # Receive coil combination (not best coil combination, just using this method here bc its simple)
     print("\nCombining coils using 3D adaptive filtering")
     encoding_resolution = rrdf["sequence"]["resolution"]
+    if is_deepdish:  # pre- 11 software
+        encoding_resolution = rd.get_nparray_dd(encoding_resolution)
     image, b1maps = coil_combine(
         image, encoding_resolution=encoding_resolution, dims_combine=[lbl.CHAN]
     )
+    # image, b1maps = coil_combine(image, encoding_resolution=encoding_resolution, dims_combine=[lbl.CHAN, lbl.ECHO])  # use this if you've registered odd/even echo images to combine all at this step.
     image = image.transpose(lbl.READOUT, lbl.PHASE, lbl.SLICE, lbl.ECHO)
 
     print(
@@ -130,6 +152,27 @@ def main():
     print(
         f"Receive b1 maps following coil combination: {b1maps.shape}, {b1maps.dims}"
     )  # [coils read phase slice odd/even echoes]
+
+    # ---------------------
+    # Saves real and imaginary numpy files separately because really old matlab doesnt read complex npy files
+    print("\nSaving .npy and .png files")  # [coils read phase slice odd/even echoes]
+    numpy_save(image, data_dir, base_name, tag="image", complex_out=True)
+
+    # uncomment to save receive coil b1maps
+    # numpy_save(b1maps, data_dir, base_name, tag= "b1map", complex_out=True)
+
+    # Save .png's (coil combined, odd/even echoes separately)
+    def save_png(image_arr, echo_idx):
+        out_path = data_dir / f"{base_name}_echo{echo_idx}.png"
+        arr = abs(np.squeeze(image_arr[:, :, :, echo_idx]))
+        print(f"Saving {out_path}")
+        write_png(arr, out_path, maxp=99, rectify=False)
+
+    image = flip_image(
+        image, [lbl.READOUT, lbl.PHASE, lbl.SLICE]
+    )  # flip so comes out in right orientation
+    save_png(image.data, echo_idx=0)
+    save_png(image.data, echo_idx=1)
 
 
 if __name__ == "__main__":

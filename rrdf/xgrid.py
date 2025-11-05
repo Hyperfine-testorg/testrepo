@@ -4,7 +4,7 @@ from typing import Tuple
 
 # Third Party
 import numpy as np
-import numba as nb
+import numba as nb  # this makes things faster, but commented out to keep this simple
 import xarray as xr
 
 from rrdf.load import ArrayLabels as lbl
@@ -65,7 +65,6 @@ def xgrid(
         img_gridded[vol_sel] = gridFFTRolloff(
             crds, data, wgts, res_rps, res_rps, partial_fourier, pocs_flag
         )
-
     print("gridding took {:2.2f} seconds".format(time.time() - time0))
     return img_gridded
 
@@ -109,6 +108,7 @@ def gridFFTRolloff(
         img_rolloff = rolloff((mtx_xy, mtx_xy))
     if d == 3:
         img_rolloff = rolloff((mtx_xy, mtx_xy, mtx_z))
+
     # Deapodization
     img_multichannel *= img_rolloff
 

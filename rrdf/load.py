@@ -34,7 +34,7 @@ def load_dict_from_h5(file_name):
         return _recursively_load_h5_group(h5file)
 
 
-def _recursively_load_h5_group(group, path="/"):
+def _recursively_load_h5_group_old(group, path="/"):
     """
     Recursively loads a group from an HDF5 file into a dictionary and prints what's being loaded.
     :param group: h5py.Group or h5py.File
@@ -44,14 +44,51 @@ def _recursively_load_h5_group(group, path="/"):
     result = {}
     for key, item in group.items():
         if isinstance(item, h5py.Group):
+            print(f"=====Group item: {item}")
             result[key] = _recursively_load_h5_group(item, f"{path.rstrip('/')}/{key}")
         else:
+            print(f"=====item: {item}")
             # if this dataset holds strings, decode via asstr()
             if h5py.check_string_dtype(item.dtype) is not None:
                 value = item.asstr()[()]  # scalar or array of str
             else:
                 value = item[()]  # numeric / other binary data
             result[key] = value
+    return result
+
+
+def _recursively_load_h5_group(group, path="/"):
+    """
+    Recursively loads a group from an HDF5 file into a dictionary and prints what's being loaded.
+    """
+    result = {}
+    # First, check if this group has attributes (deepdish stores scalar strings here)
+    if len(group.items()) == 0 and len(group.attrs) > 0:
+        # Try to extract attributes as Python values
+        for k, v in group.attrs.items():
+            if isinstance(v, bytes):
+                v = v.decode()
+            result[k] = v
+        return result
+
+    # Otherwise, walk through items
+    for key, item in group.items():
+        if isinstance(item, h5py.Group):
+            result[key] = _recursively_load_h5_group(item, f"{path.rstrip('/')}/{key}")
+        else:
+            # Handle dataset reading (string or numeric)
+            if h5py.check_string_dtype(item.dtype) is not None:
+                value = item.asstr()[()]
+            else:
+                value = item[()]
+            result[key] = value
+
+    # Optionally capture group attributes too
+    for attr_key, attr_val in group.attrs.items():
+        if isinstance(attr_val, bytes):
+            attr_val = attr_val.decode()
+        result[attr_key] = attr_val
+
     return result
 
 
@@ -67,19 +104,60 @@ def read_rrdf(rrdf_path: str):
     rrdf = load_dict_from_h5(rrdf_path)
     # --- Rebuild DataArrays ---
     data = rrdf["data"]
+
     # dims are stored as string repr of list of enum values, so eval is used
-    data_matrix_dims = data["data_matrix_dims"]
-    kspace_dims = data["kspace_coordinate_pe_dims"]
+    try:
+        sw_ver = rrdf["process_info"]["acquisition_software_version"]
+    except KeyError:
+        sw_ver = None
+    try:
+        deepdish_version = rrdf["process_info"]["deepdish_version"]
+        print(f"deepdish version: {deepdish_version}, sw_version: {sw_ver}")
+        is_deepdish = True
+    except KeyError:
+        deepdish_version = None
+        is_deepdish = False
+        pass
+
+    data_matrix_dims = get_dims_fromh5(data, "data_matrix_dims", is_deepdish)
+    kspace_dims = get_dims_fromh5(data, "kspace_coordinate_pe_dims", is_deepdish)
+    # kspace_dims = eval(data["kspace_coordinate_pe_dims"])
     raw_data_cleaned = xr.DataArray(
         np.array(data["data_matrix"]), dims=data_matrix_dims
     )
     coords2d = xr.DataArray(np.array(data["kspace_coordinate_pe"]), dims=kspace_dims)
     data_drift = None
-    if data.get("data_drift", 0) is not None:
-        drift_dims = data["data_drift_dims"]
+    if data.get("data_drift", 0) is not None and data.get("data_drift_dims", 0) != 0:
+        drift_dims = get_dims_fromh5(data, "data_drift_dims", is_deepdish)
         data_drift = xr.DataArray(np.array(data["data_drift"]), dims=drift_dims)
 
-    return raw_data_cleaned, coords2d, data_drift, rrdf
+    return raw_data_cleaned, coords2d, data_drift, rrdf, is_deepdish
+
+
+def get_dims_fromh5(data, key, is_deepdish=False):
+    """deepdish was used up through 10.1 SW. It saves lists differently from h5py."""
+    dims_group = data[key]
+    if is_deepdish and "CLASS" in dims_group:  # >= 11.0 SW
+        print(f"dims_group = {dims_group}")
+        dimlist = []
+        for k in dims_group.keys():
+            if k.startswith("i") and k[1].isdigit():
+                dimlist.append(str(dims_group[k]))
+    else:  # <= 10.1 beta SW
+        dimlist = eval(dims_group)
+    return dimlist
+
+
+def get_nparray_dd(arr):
+    """
+    deepdish stores arrays differently
+    example: imsize {'CLASS': 'GROUP', 'TITLE': 'list:3', 'VERSION': '1.0', 'i0': np.int64(138), 'i1': np.int64(112), 'i2': np.int64(40)}
+    """
+    arr_out = []
+    for k in arr.keys():
+        if k.startswith("i") and k[1].isdigit():
+            arr_out.append(arr[k])
+    return np.asarray(arr_out)
 
 
 class ArrayLabels(str, Enum):
