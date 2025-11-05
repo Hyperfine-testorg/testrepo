@@ -35,16 +35,17 @@ The output from this script is going to look worse than our product image recons
 
 """
 
-from pathlib import Path
-import numpy as np
 import argparse
+from pathlib import Path
 
-import recon_rrdf.lib.rrdf_load as rd
-from recon_rrdf.lib.xsdc import xsdc
-from recon_rrdf.lib.xgrid import xgrid
-from recon_rrdf.lib.rrdf_load import ArrayLabels as lbl
-from recon_rrdf.lib.prewhiten import prewhiten
-from recon_rrdf.lib.coil_combine import coil_combine
+import numpy as np
+
+import rrdf.load as rd
+from rrdf.coil_combine import coil_combine
+from rrdf.load import ArrayLabels as lbl
+from rrdf.prewhiten import prewhiten
+from rrdf.xgrid import xgrid
+from rrdf.xsdc import xsdc
 
 
 def main():
