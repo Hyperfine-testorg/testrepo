@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "rrdf"
 dynamic = ["version"]
-description = "Add your description here"
+description = "Image reconstruction library for Hyperfine RRDF data"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
