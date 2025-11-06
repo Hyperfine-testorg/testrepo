@@ -2,12 +2,11 @@
 Load RRDF (research raw data format) data from HDF5 files.
 """
 
-import glob
-from enum import Enum
-
-import h5py
-import numpy as np
 import xarray as xr
+import numpy as np
+import glob
+import h5py
+from enum import Enum
 
 
 def file_path():
@@ -127,7 +126,10 @@ def read_rrdf(rrdf_path: str):
     )
     coords2d = xr.DataArray(np.array(data["kspace_coordinate_pe"]), dims=kspace_dims)
     data_drift = None
-    if data.get("data_drift", 0) is not None and data.get("data_drift_dims", 0) != 0:
+    if (
+        data.get("data_drift", None) is not None
+        and data.get("data_drift_dims", None) is not None
+    ):
         drift_dims = get_dims_fromh5(data, "data_drift_dims", is_deepdish)
         data_drift = xr.DataArray(np.array(data["data_drift"]), dims=drift_dims)
 
@@ -137,14 +139,14 @@ def read_rrdf(rrdf_path: str):
 def get_dims_fromh5(data, key, is_deepdish=False):
     """deepdish was used up through 10.1 SW. It saves lists differently from h5py."""
     dims_group = data[key]
-    if is_deepdish and "CLASS" in dims_group:  # >= 11.0 SW
+    if is_deepdish and "CLASS" in dims_group:  # <= 10.1 beta SW
         print(f"dims_group = {dims_group}")
         dimlist = []
         for k in dims_group.keys():
             if k.startswith("i") and k[1].isdigit():
                 dimlist.append(str(dims_group[k]))
-    else:  # <= 10.1 beta SW
-        dimlist = eval(dims_group)
+    else:  # >= 11.0 SW
+        dimlist = list(dims_group)
     return dimlist
 
 

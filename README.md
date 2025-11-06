@@ -36,7 +36,7 @@ A Python library for reconstructing MRI images from Hyperfine's Research Raw Dat
 Reconstruct an RRDF file with:
 
 ```bash
-python recon_rrdf.py data/fse_fast_t2_rrdf_20251009_144749.h5
+python recon_rrdf.py data/10.1.0/fse_fast_t2_rrdf_20251105_162521.h5
 ```
 
 Outputs will be placed in `/data` as `.npy` files. You can read the `.npy` files into MATLAB using [readNPY](https://github.com/kwikteam/npy-matlab) like this:

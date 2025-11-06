@@ -92,6 +92,12 @@ def main():
     if is_deepdish:  # pre- 11 software
         partial_fourier = rd.get_nparray_dd(partial_fourier)
 
+    partial_fourier = rrdf["sequence"][
+        "partial_fourier"
+    ]  # [r p s], 0-1, where 1 = fully sampled dimension
+    if is_deepdish:  # pre- 11 software
+        partial_fourier = rd.get_nparray_dd(partial_fourier)
+
     # ---------------------
     # Sample density compensation
     print("\nComputing Sample density compensation weights")
@@ -119,6 +125,16 @@ def main():
     print(
         f"Image data pre-coil combine has size {image.shape}, {image.dims}"
     )  # [coils read phase slice odd/even echoes]
+
+    # uncomment to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
+    numpy_save(
+        image,
+        data_dir,
+        base_name,
+        tag="image_coils",
+        complex_out=True,
+        real_imag_separate=True,
+    )
 
     # uncomment to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
     numpy_save(

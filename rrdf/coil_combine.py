@@ -6,11 +6,12 @@ from typing import Tuple
 
 import numpy as np
 import xarray as xr
+
+from scipy.interpolate import interpn
 from numba import (
     c8,
     njit,
 )
-from scipy.interpolate import interpn
 
 from rrdf.load import ArrayLabels as lbl
 
