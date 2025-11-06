@@ -63,7 +63,7 @@ def test_recon_from_rrdf(file_path):
     """
     Test loading RRDF and reconstructing image outide pyHFS context.
     """
-    raw_data_cleaned, coords2d, data_drift, rrdf = load.read_rrdf(file_path)
+    raw_data_cleaned, coords2d, data_drift, rrdf, _ = load.read_rrdf(file_path)
     raw_data_cleaned = raw_data_cleaned.expand_dims(
         dim="CHAN", axis=0
     )  # add dummy channel dimension is missing for xgrid
@@ -85,7 +85,8 @@ def test_recon_from_rrdf(file_path):
         np.rot90(img_recon.data, k=2, axes=(2, 3)), (0, 0, 1, 1)
     )  # there seems to be a rotation and small shift between nufft and xgrid?
     # There's an expected scaling factor due to the non uniform sampling density
-    ratio = np.abs(img_recon.data) / np.abs(data_drift.data)
+    epsilon = 1e-9
+    ratio = np.abs(img_recon.data) / (np.abs(data_drift.data) + epsilon)
     ratio = ratio[np.isfinite(ratio)]
     scale_factor = np.median(ratio)
     print(f"Scale factor: {scale_factor:.3f}")

@@ -99,6 +99,7 @@ def read_rrdf(rrdf_path: str):
         coords2d: xr.DataArray
         data_drift: xr.DataArray | None
         rrdf: dict
+        is_deepdish: bool
     """
     rrdf = load_dict_from_h5(rrdf_path)
     # --- Rebuild DataArrays ---
