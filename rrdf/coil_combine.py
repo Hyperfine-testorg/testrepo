@@ -1,12 +1,11 @@
 """Coil Combination"""
 
-import itertools
-from math import prod
-from typing import Tuple
-
 import numpy as np
 import xarray as xr
+import itertools
 
+from math import prod
+from typing import Tuple
 from scipy.interpolate import interpn
 from numba import (
     c8,
@@ -24,7 +23,7 @@ def coil_combine(data, encoding_resolution, dims_combine=[lbl.CHAN]):
     )
     assert all(_ in dims for _ in dims_3d)
 
-    # remove mean phase from all channels
+    # remove mean phase from all channels before coil combination
     data = remove_mean_phase(data)
     data_image = data.copy()
 
@@ -93,7 +92,7 @@ def coil_combine(data, encoding_resolution, dims_combine=[lbl.CHAN]):
     return img_combined, ib1maps_xr
 
 
-def remove_mean_phase(img: xr.DataArray) -> xr.DataArray:
+def remove_mean_phase(img: xr.DataArray, dims_combine=[lbl.CHAN]) -> xr.DataArray:
     """Remove mean phase separately for each echo and coil.
 
     Args:
@@ -102,19 +101,38 @@ def remove_mean_phase(img: xr.DataArray) -> xr.DataArray:
     Returns:
         DataArray with the same shape, mean phase removed per coil/echo.
     """
-    img_out = xr.zeros_like(img)
+    dims_present = [d for d in [lbl.ECHO, lbl.CHAN] if d in img.dims]
+    if not dims_present:
+        return img
 
-    for echo_val in img[lbl.ECHO].values:
-        for chan_val in img[lbl.CHAN].values:
-            # Select the (echo, chan) slice
-            slice_img = img.sel({lbl.ECHO: echo_val, lbl.CHAN: chan_val})
+    # Determine which dims exist
+    dims_present = [d for d in [lbl.ECHO, lbl.CHAN] if d in img.dims]
 
-            # Smooth the phase reference for this echo/coil
-            meanphs = blur(np.squeeze(slice_img.data), filter_fac=0.05)
+    # Compute the blurred mean phase image (convert back to xarray if blur() returns np.ndarray)
+    mean_input = np.abs(img).mean(dim=dims_present, keep_attrs=True)
+    meanphs_np = blur(mean_input.data, filter_fac=0.05)
 
-            # Apply correction
-            phs_corr = np.exp(-1j * np.angle(meanphs))
-            img_out.loc[{lbl.ECHO: echo_val, lbl.CHAN: chan_val}] = slice_img * phs_corr
+    # Wrap back into an xarray.DataArray with same dims/coords as mean_input
+    meanphs = xr.DataArray(
+        meanphs_np,
+        dims=mean_input.dims,
+        coords=mean_input.coords,
+        attrs=mean_input.attrs,
+    )
+
+    # Compute correction term
+    # phs_corr = np.exp(-1j * np.angle(meanphs))
+    phs_corr = xr.apply_ufunc(
+        lambda x: np.exp(-1j * np.angle(x)),
+        meanphs,
+        keep_attrs=True,
+    )
+
+    # Broadcast correction to match original dimensions
+    phs_corr = phs_corr.broadcast_like(img)
+
+    # Apply correction
+    img_out = img * phs_corr
 
     return img_out
 

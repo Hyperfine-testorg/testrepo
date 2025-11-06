@@ -141,7 +141,6 @@ def get_dims_fromh5(data, key, is_deepdish=False):
     """deepdish was used up through 10.1 SW. It saves lists differently from h5py."""
     dims_group = data[key]
     if is_deepdish and "CLASS" in dims_group:  # <= 10.1 beta SW
-        print(f"dims_group = {dims_group}")
         dimlist = []
         for k in dims_group.keys():
             if k.startswith("i") and k[1].isdigit():

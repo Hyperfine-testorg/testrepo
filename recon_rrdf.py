@@ -46,6 +46,7 @@ from rrdf.save_images import write_png, numpy_save, flip_image
 from rrdf.load import ArrayLabels as lbl
 from rrdf.prewhiten import prewhiten
 from rrdf.coil_combine import coil_combine
+from rrdf.register_echo_fse import register_echo_fse
 
 
 def main():
@@ -57,7 +58,7 @@ def main():
     args = parser.parse_args()
 
     base_dir = Path(__file__).resolve().parent
-    data_dir = base_dir / "data"
+    data_dir = base_dir / "output"
     data_dir.mkdir(parents=True, exist_ok=True)  # create if missing
 
     # ---------------------
@@ -100,8 +101,7 @@ def main():
 
     # ---------------------
     # Sample density compensation
-    print("\nComputing Sample density compensation weights")
-    print(f"imsize {imsize}")
+    print("\nComputing Sample density compensation weights for image size {imsize}")
     sdc_weights = xsdc(coords2d, imsize)
     print(
         f"Sample density compensation weights are [lines, odd/even echoes] {sdc_weights.shape}"
@@ -126,7 +126,10 @@ def main():
         f"Image data pre-coil combine has size {image.shape}, {image.dims}"
     )  # [coils read phase slice odd/even echoes]
 
-    # uncomment to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
+    # Uncomment this line to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
+    # numpy_save(image, data_dir, base_name, tag= "image_coils", complex_out=True, real_imag_separate=True)
+
+    # Uncomment to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
     numpy_save(
         image,
         data_dir,
@@ -135,20 +138,6 @@ def main():
         complex_out=True,
         real_imag_separate=True,
     )
-
-    # uncomment to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
-    numpy_save(
-        image,
-        data_dir,
-        base_name,
-        tag="image_coils",
-        complex_out=True,
-        real_imag_separate=True,
-    )
-
-    # Odd/even image registration (not implemented)
-    # Do an initial coil combination for each of the odd/even echo parity imaages,
-    # then compute and apply a nonrigid 3D registration between odd/even echoes (example)
 
     # ---------------------
     # Receive coil combination (not best coil combination, just using this method here bc its simple)
@@ -159,23 +148,32 @@ def main():
     image, b1maps = coil_combine(
         image, encoding_resolution=encoding_resolution, dims_combine=[lbl.CHAN]
     )
-    # image, b1maps = coil_combine(image, encoding_resolution=encoding_resolution, dims_combine=[lbl.CHAN, lbl.ECHO])  # use this if you've registered odd/even echo images to combine all at this step.
+    # Uncomment to save receive coil b1maps
+    # numpy_save(b1maps, data_dir, base_name, tag= "b1map", complex_out=True)
+
     image = image.transpose(lbl.READOUT, lbl.PHASE, lbl.SLICE, lbl.ECHO)
 
     print(
-        f"Images following coil combination: {image.shape}, {image.dims}"
+        f"Image size following coil combination: {image.shape}, {image.dims}"
     )  # [coils read phase slice odd/even echoes]
     print(
-        f"Receive b1 maps following coil combination: {b1maps.shape}, {b1maps.dims}"
+        f"Receive b1 map size: {b1maps.shape}, {b1maps.dims}"
     )  # [coils read phase slice odd/even echoes]
+
+    # Odd/even image registration: compute and apply a nonrigid 3D registration between odd/even echo images
+    image = register_echo_fse(image, encoding_resolution)
+    print(
+        f"Image size following regstration: {image.shape}, {image.dims}"
+    )  # [coils read phase slice odd/even echoes]
+
+    # Combine odd/even images after registration
+    image, _ = coil_combine(
+        image, encoding_resolution=encoding_resolution, dims_combine=[lbl.ECHO]
+    )
 
     # ---------------------
     # Saves real and imaginary numpy files separately because really old matlab doesnt read complex npy files
-    print("\nSaving .npy and .png files")  # [coils read phase slice odd/even echoes]
     numpy_save(image, data_dir, base_name, tag="image", complex_out=True)
-
-    # uncomment to save receive coil b1maps
-    # numpy_save(b1maps, data_dir, base_name, tag= "b1map", complex_out=True)
 
     # Save .png's (coil combined, odd/even echoes separately)
     def save_png(image_arr, echo_idx):
@@ -187,8 +185,14 @@ def main():
     image = flip_image(
         image, [lbl.READOUT, lbl.PHASE, lbl.SLICE]
     )  # flip so comes out in right orientation
-    save_png(image.data, echo_idx=0)
-    save_png(image.data, echo_idx=1)
+
+    if lbl.ECHO in image.dims:
+        for echo_idx in range(image.sizes[lbl.ECHO]):
+            save_png(image.data, echo_idx=echo_idx)
+    else:
+        out_path = data_dir / f"{base_name}.png"
+        print(f"Saving {out_path}")
+        write_png(abs(np.squeeze(image.data)), out_path, maxp=99, rectify=False)
 
 
 if __name__ == "__main__":

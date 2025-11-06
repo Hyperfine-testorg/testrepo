@@ -35,7 +35,6 @@ def numpy_save(
         fn_i = data_dir / f"{base_name}_{tag}_i.npy"
         print(f"Saving data to {fn_i}")
         np.save(fn_i, np.imag(image.data))
-    print("")
 
 
 def flip_image(img: xr.DataArray, dims) -> xr.DataArray:
