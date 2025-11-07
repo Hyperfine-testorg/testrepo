@@ -42,11 +42,12 @@ import argparse
 import rrdf.load as rd
 from rrdf.xsdc import xsdc
 from rrdf.xgrid import xgrid
-from rrdf.save_images import write_png, numpy_save, flip_image
+from rrdf.save_images import write_png, numpy_save, save_png
 from rrdf.load import ArrayLabels as lbl
 from rrdf.prewhiten import prewhiten
 from rrdf.coil_combine import coil_combine
 from rrdf.register_echo_fse import register_echo_fse
+from rrdf.orient_images import orient_images, orientation_from_scanplane
 
 
 def main():
@@ -61,7 +62,7 @@ def main():
     data_dir = base_dir / "output"
     data_dir.mkdir(parents=True, exist_ok=True)  # create if missing
 
-    # ---------------------
+    # ---------------------------------------------------------------
     # Input file
     fn = Path(args.filename)
     if not fn.exists():
@@ -70,9 +71,9 @@ def main():
     # Base output filename without extension
     base_name = fn.stem  # strips ".h5"
 
-    # ---------------------
+    # ---------------------------------------------------------------
     # load data and coordinates from h5 file
-    raw_data, coords2d, data_drift, rrdf, is_deepdish = rd.read_rrdf(
+    raw_data, coords2d, data_drift, meta, is_deepdish = rd.read_rrdf(
         fn
     )  # raw_data is an xarray. can convert to numpy array by doing raw_data.data
     print(f"Raw data shape: {raw_data.shape} = [coils, read, odd/even echoes, lines]")
@@ -83,23 +84,23 @@ def main():
     )
 
     # Imaging parameters
-    imsize = rrdf["sequence"]["matrix_size"]  # [r p s]
+    imsize = meta["sequence"]["matrix_size"]  # [r p s]
     if is_deepdish:  # pre- 11 software
         imsize = rd.get_nparray_dd(imsize)
 
-    partial_fourier = rrdf["sequence"][
+    partial_fourier = meta["sequence"][
         "partial_fourier"
     ]  # [r p s], 0-1, where 1 = fully sampled dimension
     if is_deepdish:  # pre- 11 software
         partial_fourier = rd.get_nparray_dd(partial_fourier)
 
-    partial_fourier = rrdf["sequence"][
+    partial_fourier = meta["sequence"][
         "partial_fourier"
     ]  # [r p s], 0-1, where 1 = fully sampled dimension
     if is_deepdish:  # pre- 11 software
         partial_fourier = rd.get_nparray_dd(partial_fourier)
 
-    # ---------------------
+    # ---------------------------------------------------------------
     # Sample density compensation
     print("\nComputing Sample density compensation weights for image size {imsize}")
     sdc_weights = xsdc(coords2d, imsize)
@@ -107,12 +108,12 @@ def main():
         f"Sample density compensation weights are [lines, odd/even echoes] {sdc_weights.shape}"
     )
 
-    # ---------------------
+    # ---------------------------------------------------------------
     # Prewhitening
     print("\nComputing and applying prewhitening matrix")
     raw_data = prewhiten(raw_data, coords2d)
 
-    # ---------------------
+    # ---------------------------------------------------------------
     # NUFFT reconstruction
     print(f"\nReconstructing images with NUFFT, matrix size [r, p, s] = {imsize}")
     image = xgrid(
@@ -139,10 +140,10 @@ def main():
         real_imag_separate=True,
     )
 
-    # ---------------------
+    # ---------------------------------------------------------------
     # Receive coil combination (not best coil combination, just using this method here bc its simple)
     print("\nCombining coils using 3D adaptive filtering")
-    encoding_resolution = rrdf["sequence"]["resolution"]
+    encoding_resolution = meta["sequence"]["resolution"]
     if is_deepdish:  # pre- 11 software
         encoding_resolution = rd.get_nparray_dd(encoding_resolution)
     image, b1maps = coil_combine(
@@ -160,7 +161,8 @@ def main():
         f"Receive b1 map size: {b1maps.shape}, {b1maps.dims}"
     )  # [coils read phase slice odd/even echoes]
 
-    # Odd/even image registration: compute and apply a nonrigid 3D registration between odd/even echo images
+    # ---------------------------------------------------------------
+    # Odd/even image registration: compute and apply a nonrigid 3D registration between odd/even echo parity images
     image = register_echo_fse(image, encoding_resolution)
     print(
         f"Image size following regstration: {image.shape}, {image.dims}"
@@ -171,24 +173,27 @@ def main():
         image, encoding_resolution=encoding_resolution, dims_combine=[lbl.ECHO]
     )
 
-    # ---------------------
-    # Saves real and imaginary numpy files separately because really old matlab doesnt read complex npy files
+    # ---------------------------------------------------------------
+    # Orient the image in anatomical (LPI) coordinates
+    scan_plane = meta["sequence"]["acquisition_geometry"]  # i.e. XYZ, YZX, etc.
+    try:
+        # axial, sagittal, coronal
+        image_orientation = meta["sequence"]["image_orientation"]
+    except:  # noqa
+        image_orientation = orientation_from_scanplane(scan_plane)
+        pass
+    image = orient_images(
+        image, scan_plane=scan_plane, image_orientation=image_orientation
+    )
+
+    # ---------------------------------------------------------------
+    # Save .npy format and .png's
+    # Save real and imaginary numpy files separately because really old matlab doesnt read complex npy files
     numpy_save(image, data_dir, base_name, tag="image", complex_out=True)
-
-    # Save .png's (coil combined, odd/even echoes separately)
-    def save_png(image_arr, echo_idx):
-        out_path = data_dir / f"{base_name}_echo{echo_idx}.png"
-        arr = abs(np.squeeze(image_arr[:, :, :, echo_idx]))
-        print(f"Saving {out_path}")
-        write_png(arr, out_path, maxp=99, rectify=False)
-
-    image = flip_image(
-        image, [lbl.READOUT, lbl.PHASE, lbl.SLICE]
-    )  # flip so comes out in right orientation
 
     if lbl.ECHO in image.dims:
         for echo_idx in range(image.sizes[lbl.ECHO]):
-            save_png(image.data, echo_idx=echo_idx)
+            save_png(image.data, data_dir, base_name, echo_idx=echo_idx)
     else:
         out_path = data_dir / f"{base_name}.png"
         print(f"Saving {out_path}")

@@ -4,7 +4,6 @@ import os
 # Third Party
 import imageio
 import numpy as np
-import xarray as xr
 
 
 def numpy_save(
@@ -37,9 +36,12 @@ def numpy_save(
         np.save(fn_i, np.imag(image.data))
 
 
-def flip_image(img: xr.DataArray, dims) -> xr.DataArray:
-    """Flip an xarray image along given dims."""
-    return img.isel({d: slice(None, None, -1) for d in dims})
+def save_png(image_arr, data_dir, base_name, echo_idx):
+    """Save .png's (coil combined, odd/even echoes separately)"""
+    out_path = data_dir / f"{base_name}_echo{echo_idx}.png"
+    arr = abs(np.squeeze(image_arr[:, :, :, echo_idx]))
+    print(f"Saving {out_path}")
+    write_png(arr, out_path, maxp=99, rectify=False)
 
 
 def write_png(rimg, fn, maxp, rectify=False, in_memory=False):

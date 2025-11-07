@@ -105,6 +105,8 @@ def read_rrdf(rrdf_path: str):
     # --- Rebuild DataArrays ---
     data = rrdf["data"]
 
+    print(f"-------------rrdf keys {rrdf.keys()}")
+
     # dims are stored as string repr of list of enum values, so eval is used
     try:
         sw_ver = rrdf["process_info"]["acquisition_software_version"]
