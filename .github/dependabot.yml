@@ -1,0 +1,22 @@
+# .github/dependabot.yml
+version: 2
+updates:
+  - package-ecosystem: "uv"   # official uv support
+    directory: "/"            # where your pyproject.toml / uv.lock live
+    schedule:
+      interval: "weekly"      # or daily/monthly/cron
+      day: "sunday"
+      time: "04:00"
+      timezone: "America/New_York"
+    open-pull-requests-limit: 10
+    commit-message:
+      prefix: "deps"
+      include: "scope"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "sunday"
+      time: "04:10"
+      timezone: "America/New_York"
