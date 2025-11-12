@@ -44,8 +44,8 @@ def prewhiten(data: xr.DataArray, coords: xr.DataArray) -> xr.DataArray:
     kw = xr.DataArray(kw, dims=(lbl.CHAN, lbl.READOUT, lbl.SAMPLES))
 
     # get noise samples to compute covariance matrix
-    noise_samples = kw * data_volflat
-    noise_samples = np.reshape(noise_samples.data, (n_channels, -1))
+    noise_samples_da = kw * data_volflat
+    noise_samples = np.reshape(noise_samples_da.data, (n_channels, -1))
 
     # compute covariance matrix
     covariance_matrix = np.dot(noise_samples, np.conj(noise_samples).T)

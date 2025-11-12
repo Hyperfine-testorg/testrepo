@@ -1,22 +1,23 @@
 import time
+from collections.abc import Hashable, Sequence
 from itertools import product
-from typing import Tuple
+from typing import Literal, Tuple, cast
+
+import numba as nb  # this makes things faster, but commented out to keep this simple
 
 # Third Party
 import numpy as np
-import numba as nb  # this makes things faster, but commented out to keep this simple
 import xarray as xr
 
 from rrdf.load import ArrayLabels as lbl
-from collections.abc import Sequence
 
 
 def xgrid(
     kdata: xr.DataArray,
     coords: xr.DataArray,
     weights: xr.DataArray,
-    res: np.ndarray,  # [r, p, s]
-    partial_fourier: np.ndarray,  # [r, p, s]
+    res: Sequence[int] | np.ndarray,  # [r, p, s]
+    partial_fourier: Sequence[float] | np.ndarray,  # [r, p, s]
 ) -> xr.DataArray:
     # gridding
     print("\nHELLO from XGrid : kdata", kdata.shape, kdata.dims)
@@ -31,19 +32,32 @@ def xgrid(
     coords = coords.transpose(..., lbl.ENC, lbl.COORD)
     weights = weights.transpose(..., lbl.ENC)
 
-    volume_dims = kdata.dims[:-3]  # everything except (CHAN, READOUT, ENC)
+    volume_dims: tuple[Hashable, ...] = kdata.dims[
+        :-3
+    ]  # everything except (CHAN, READOUT, ENC)
     volume_sizes = kdata.shape[:-3]
     n_channels = kdata.sizes[lbl.CHAN]
     dtype = np.complex64
 
-    res_rps = tuple(res)
-    partial_fourier = tuple(partial_fourier)
-    pocs_flag = bool(0 < partial_fourier.count(1) < 3)
+    res_rps_raw = tuple(int(val) for val in res)
+    if len(res_rps_raw) != 3:
+        raise ValueError(
+            "res must contain exactly three elements [readout, phase, slice]"
+        )
+    res_rps = cast(tuple[int, int, int], res_rps_raw)
+
+    partial_fourier_raw = tuple(float(val) for val in partial_fourier)
+    if len(partial_fourier_raw) != 3:
+        raise ValueError("partial_fourier must contain exactly three elements")
+    partial_fourier_tuple = cast(tuple[float, float, float], partial_fourier_raw)
+    pocs_flag = bool(0 < partial_fourier_tuple.count(1) < 3)
 
     # sanity check on readout dimension
     assert res_rps[0] == kdata.sizes[lbl.READOUT]
 
     # Decide output shape + dims
+    shape: tuple[int, ...]
+    dims: tuple[Hashable, ...]
     if res_rps[2] == 1 and volume_dims == (lbl.REPS,):
         shape = (n_channels, *res_rps)
         dims = (lbl.CHAN, lbl.READOUT, lbl.PHASE, lbl.REPS)
@@ -63,7 +77,7 @@ def xgrid(
         wgts = weights[vol_sel].data
 
         img_gridded[vol_sel] = gridFFTRolloff(
-            crds, data, wgts, res_rps, res_rps, partial_fourier, pocs_flag
+            crds, data, wgts, res_rps, res_rps, partial_fourier_tuple, pocs_flag
         )
     print("gridding took {:2.2f} seconds".format(time.time() - time0))
     return img_gridded
@@ -483,25 +497,39 @@ def threed_grid(crds, N, weights, data, data_out, mtx_xy, mtx_z):
     return 0
 
 
+AxesLike = int | Sequence[int] | None
+FftNorm = Literal["backward", "ortho", "forward"] | None
+
+
+def _normalize_axes(axes: AxesLike) -> tuple[int, ...] | None:
+    if axes is None:
+        return None
+    if isinstance(axes, int):
+        return (axes,)
+    return tuple(axes)
+
+
 def shifted_fftn(
     x: np.ndarray,
-    axes: int | Sequence[int] | None = None,
-    norm: str | None = None,
+    axes: AxesLike = None,
+    norm: FftNorm = None,
 ) -> np.ndarray:
-    _x = np.fft.ifftshift(x, axes=axes)
-    _out = np.fft.fftn(_x, axes=axes, norm=norm)
-    out = np.fft.fftshift(_out, axes=axes)
+    normalized_axes = _normalize_axes(axes)
+    _x = np.fft.ifftshift(x, axes=normalized_axes)
+    _out = np.fft.fftn(_x, axes=normalized_axes, norm=norm)
+    out = np.fft.fftshift(_out, axes=normalized_axes)
 
     return out
 
 
 def shifted_ifftn(
     x: np.ndarray,
-    axes: int | Sequence[int] | None = None,
-    norm: str | None = None,
+    axes: AxesLike = None,
+    norm: FftNorm = None,
 ) -> np.ndarray:
-    _x = np.fft.ifftshift(x, axes=axes)
-    _out = np.fft.ifftn(_x, axes=axes, norm=norm)
-    out = np.fft.fftshift(_out, axes=axes)
+    normalized_axes = _normalize_axes(axes)
+    _x = np.fft.ifftshift(x, axes=normalized_axes)
+    _out = np.fft.ifftn(_x, axes=normalized_axes, norm=norm)
+    out = np.fft.fftshift(_out, axes=normalized_axes)
 
     return out

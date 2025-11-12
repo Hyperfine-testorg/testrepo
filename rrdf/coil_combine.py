@@ -1,16 +1,16 @@
 """Coil Combination"""
 
+import itertools
+from math import prod
+from typing import Literal, Tuple
+
 import numpy as np
 import xarray as xr
-import itertools
-
-from math import prod
-from typing import Tuple
-from scipy.interpolate import interpn
 from numba import (
     c8,
     njit,
 )
+from scipy.interpolate import interpn
 
 from rrdf.load import ArrayLabels as lbl
 
@@ -109,7 +109,8 @@ def remove_mean_phase(img: xr.DataArray, dims_combine=[lbl.CHAN]) -> xr.DataArra
     dims_present = [d for d in [lbl.ECHO, lbl.CHAN] if d in img.dims]
 
     # Compute the blurred mean phase image (convert back to xarray if blur() returns np.ndarray)
-    mean_input = np.abs(img).mean(dim=dims_present, keep_attrs=True)
+    magnitude = xr.apply_ufunc(np.abs, img, keep_attrs=True)
+    mean_input = magnitude.mean(dim=dims_present, keep_attrs=True)
     meanphs_np = blur(mean_input.data, filter_fac=0.05)
 
     # Wrap back into an xarray.DataArray with same dims/coords as mean_input
@@ -244,7 +245,9 @@ def get_patch_adaptive_filter(
 def grid_interpn(
     img: np.ndarray,
     Nd_out: Tuple[int, ...],
-    method: str = "linear",
+    method: Literal[
+        "linear", "nearest", "slinear", "cubic", "quintic", "pchip"
+    ] = "linear",
 ) -> np.ndarray:
     """Grid interpolation along the last ``len(shape_out)`` dims"""
     ndim = len(Nd_out)
