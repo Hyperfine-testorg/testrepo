@@ -77,7 +77,12 @@ def main():
         fn
     )  # raw_data is an xarray. can convert to numpy array by doing raw_data.data
     print(f"Raw data shape: {raw_data.shape} = [coils, read, odd/even echoes, lines]")
-    print(f"Navigator data shape: {data_drift.shape} = [coils, read, lines]")
+
+    if data_drift is not None:
+        print(f"Navigator data shape: {data_drift.shape} = [coils, read, lines]")
+    else:
+        print("Did not read any navigator data")
+
     print(
         f"Coords2D shape: {coords2d.shape} = [dims, lines, odd/even echos], "
         f"scaled between {np.min(coords2d.data)} and {np.max(coords2d.data)}"
@@ -149,10 +154,10 @@ def main():
     image, b1maps = coil_combine(
         image, encoding_resolution=encoding_resolution, dims_combine=[lbl.CHAN]
     )
+    image = image.transpose(lbl.READOUT, lbl.PHASE, lbl.SLICE, ...)
+
     # Uncomment to save receive coil b1maps
     # numpy_save(b1maps, data_dir, base_name, tag= "b1map", complex_out=True)
-
-    image = image.transpose(lbl.READOUT, lbl.PHASE, lbl.SLICE, lbl.ECHO)
 
     print(
         f"Image size following coil combination: {image.shape}, {image.dims}"
@@ -169,9 +174,10 @@ def main():
     )  # [coils read phase slice odd/even echoes]
 
     # Combine odd/even images after registration
-    image, _ = coil_combine(
-        image, encoding_resolution=encoding_resolution, dims_combine=[lbl.ECHO]
-    )
+    if lbl.ECHO in image.dims:
+        image, _ = coil_combine(
+            image, encoding_resolution=encoding_resolution, dims_combine=[lbl.ECHO]
+        )
 
     # ---------------------------------------------------------------
     # Orient the image in anatomical (LPI) coordinates

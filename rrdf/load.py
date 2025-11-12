@@ -105,7 +105,8 @@ def read_rrdf(rrdf_path: str):
     # --- Rebuild DataArrays ---
     data = rrdf["data"]
 
-    print(f"-------------rrdf keys {rrdf.keys()}")
+    print(f"Keys in the RRDF file are: {rrdf.keys()}")
+    print(f"Keys in the 'data' file are: {data.keys()}\n")
 
     # dims are stored as string repr of list of enum values, so eval is used
     try:
@@ -123,18 +124,21 @@ def read_rrdf(rrdf_path: str):
 
     data_matrix_dims = get_dims_fromh5(data, "data_matrix_dims", is_deepdish)
     kspace_dims = get_dims_fromh5(data, "kspace_coordinate_pe_dims", is_deepdish)
+
     # kspace_dims = eval(data["kspace_coordinate_pe_dims"])
     raw_data_cleaned = xr.DataArray(
         np.array(data["data_matrix"]), dims=data_matrix_dims
     )
     coords2d = xr.DataArray(np.array(data["kspace_coordinate_pe"]), dims=kspace_dims)
-    data_drift = None
-    if (
-        data.get("data_drift", None) is not None
-        and data.get("data_drift_dims", None) is not None
-    ):
-        drift_dims = get_dims_fromh5(data, "data_drift_dims", is_deepdish)
-        data_drift = xr.DataArray(np.array(data["data_drift"]), dims=drift_dims)
+
+    # Navigator drift data
+    data_drift = data.get("data_drift", None)
+    if isinstance(data_drift, str):
+        data_drift = None
+    if data_drift is not None:
+        if data.get("data_drift_dims", None) is not None:
+            drift_dims = get_dims_fromh5(data, "data_drift_dims", is_deepdish)
+            data_drift = xr.DataArray(np.array(data_drift), dims=drift_dims)
 
     return raw_data_cleaned, coords2d, data_drift, rrdf, is_deepdish
 
