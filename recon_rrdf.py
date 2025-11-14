@@ -58,17 +58,37 @@ def main():
     )
     args = parser.parse_args()
 
+    # ---------------------------------------------------------------
+    # Output directory
     base_dir = Path(__file__).resolve().parent
     data_dir = base_dir / "output"
     data_dir.mkdir(parents=True, exist_ok=True)  # create if missing
 
     # ---------------------------------------------------------------
-    # Input file
-    fn = Path(args.filename)
-    if not fn.exists():
-        raise FileNotFoundError(f"File not found: {fn}")
+    # Input file (s)
+    input_filename_or_foldername = Path(args.filename)
+    if Path.is_file(input_filename_or_foldername):
+        # make the filename a list so it can be iterated over
+        files_to_recon = [input_filename_or_foldername]
+    elif Path.is_dir(input_filename_or_foldername):
+        # if a path, iterate over the files in the directory
+        files_to_recon = [
+            path for path in input_filename_or_foldername.iterdir() if path.is_file()
+        ]
+    else:
+        raise ValueError("Argument must be a valid filename or foldername.")
+
+    for fn in files_to_recon:
+        if not fn.exists():
+            print(f"File not found: {fn}, skipping recon.")
+            continue
+        reconstruct_image(fn, data_dir)
+
+
+def reconstruct_image(fn, output_dir):
+    """reconstruct_image(input_filepath, output_dir)"""
+
     print(f"Loading data from {fn}")
-    # Base output filename without extension
     base_name = fn.stem  # strips ".h5"
 
     # ---------------------------------------------------------------
@@ -88,16 +108,11 @@ def main():
         f"scaled between {np.min(coords2d.data)} and {np.max(coords2d.data)}"
     )
 
+    # ---------------------------------------------------------------
     # Imaging parameters
     imsize = meta["sequence"]["matrix_size"]  # [r p s]
     if is_deepdish:  # pre- 11 software
         imsize = rd.get_nparray_dd(imsize)
-
-    partial_fourier = meta["sequence"][
-        "partial_fourier"
-    ]  # [r p s], 0-1, where 1 = fully sampled dimension
-    if is_deepdish:  # pre- 11 software
-        partial_fourier = rd.get_nparray_dd(partial_fourier)
 
     partial_fourier = meta["sequence"][
         "partial_fourier"
@@ -128,22 +143,12 @@ def main():
         res=imsize,
         partial_fourier=partial_fourier,
     )
-    print(
-        f"Image data pre-coil combine has size {image.shape}, {image.dims}"
-    )  # [coils read phase slice odd/even echoes]
+    print(f"Image data pre-coil combine has size {image.shape}, {image.dims}")
 
-    # Uncomment this line to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
-    # numpy_save(image, data_dir, base_name, tag= "image_coils", complex_out=True, real_imag_separate=True)
-
-    # Uncomment to save images pre-coil combination. Also have Option for saving real and imaginary as separate files.
-    numpy_save(
-        image,
-        data_dir,
-        base_name,
-        tag="image_coils",
-        complex_out=True,
-        real_imag_separate=True,
-    )
+    # ---------------------------------------------------------------
+    # Save per-coil images to .npy
+    # Uncomment this line to save per-coil images before coil combination. Also have Option for saving real and imaginary as separate files.
+    # numpy_save(image, output_dir, base_name, tag= "image_coils", complex_out=True, real_imag_separate=True)
 
     # ---------------------------------------------------------------
     # Receive coil combination (not best coil combination, just using this method here bc its simple)
@@ -151,27 +156,22 @@ def main():
     encoding_resolution = meta["sequence"]["resolution"]
     if is_deepdish:  # pre- 11 software
         encoding_resolution = rd.get_nparray_dd(encoding_resolution)
+
     image, b1maps = coil_combine(
         image, encoding_resolution=encoding_resolution, dims_combine=[lbl.CHAN]
     )
     image = image.transpose(lbl.READOUT, lbl.PHASE, lbl.SLICE, ...)
 
     # Uncomment to save receive coil b1maps
-    # numpy_save(b1maps, data_dir, base_name, tag= "b1map", complex_out=True)
+    # numpy_save(b1maps, output_dir, base_name, tag= "b1map", complex_out=True)
 
-    print(
-        f"Image size following coil combination: {image.shape}, {image.dims}"
-    )  # [coils read phase slice odd/even echoes]
-    print(
-        f"Receive b1 map size: {b1maps.shape}, {b1maps.dims}"
-    )  # [coils read phase slice odd/even echoes]
+    print(f"Image size following coil combination: {image.shape}, {image.dims}")
+    print(f"Receive b1 map size: {b1maps.shape}, {b1maps.dims}")
 
     # ---------------------------------------------------------------
     # Odd/even image registration: compute and apply a nonrigid 3D registration between odd/even echo parity images
     image = register_echo_fse(image, encoding_resolution)
-    print(
-        f"Image size following regstration: {image.shape}, {image.dims}"
-    )  # [coils read phase slice odd/even echoes]
+    print(f"Image size following regstration: {image.shape}, {image.dims}")
 
     # Combine odd/even images after registration
     if lbl.ECHO in image.dims:
@@ -195,13 +195,13 @@ def main():
     # ---------------------------------------------------------------
     # Save .npy format and .png's
     # Save real and imaginary numpy files separately because really old matlab doesnt read complex npy files
-    numpy_save(image, data_dir, base_name, tag="image", complex_out=True)
+    numpy_save(image, output_dir, base_name, tag="image", complex_out=True)
 
     if lbl.ECHO in image.dims:
         for echo_idx in range(image.sizes[lbl.ECHO]):
-            save_png(image.data, data_dir, base_name, echo_idx=echo_idx)
+            save_png(image.data, output_dir, base_name, echo_idx=echo_idx)
     else:
-        out_path = data_dir / f"{base_name}.png"
+        out_path = output_dir / f"{base_name}.png"
         print(f"Saving {out_path}")
         write_png(abs(np.squeeze(image.data)), out_path, maxp=99, rectify=False)
 
