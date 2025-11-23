@@ -13,7 +13,7 @@ jobs:
       contents: write  # required to create GitHub releases
     steps:
       - name: Checkout source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
       - name: Install uv
         uses: astral-sh/setup-uv@v3
         with:
