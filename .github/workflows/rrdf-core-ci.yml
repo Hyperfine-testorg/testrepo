@@ -26,10 +26,16 @@ jobs:
       - name: Install Python
         run: uv python install 3.10
 
+      - name: Create virtualenv
+        run: uv venv .venv
+
       - name: Install core package only
         run: |
+          source .venv/bin/activate
           uv pip install -e rrdf-core
           uv pip install pytest
 
       - name: Run core tests
-        run: uv run pytest rrdf-core/tests
+        run: |
+          source .venv/bin/activate
+          uv run pytest rrdf-core/tests
