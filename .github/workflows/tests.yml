@@ -39,7 +39,7 @@ jobs:
       - name: Run rrdf-core tests
         run: |
           source .venv/bin/activate
-          uv run pytest rrdf-core/tests
+          uv run --no-project pytest rrdf-core/tests
 
   recon:
     name: rrdf-recon tests
@@ -71,4 +71,4 @@ jobs:
       - name: Run rrdf-recon tests (light)
         run: |
           source .venv/bin/activate
-          uv run pytest rrdf-recon/tests -m "not recon_data"
+          uv run --no-project pytest rrdf-recon/tests -m "not recon_data"
