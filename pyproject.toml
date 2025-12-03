@@ -10,6 +10,9 @@ readme = "README.md"
 requires-python = ">=3.10"
 dependencies = []
 
+[tool.hatch.build.targets.wheel]
+packages = []
+
 [dependency-groups]
 dev = [
     "deptry>=0.24.0",
