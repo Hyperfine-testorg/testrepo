@@ -11,7 +11,7 @@ requires-python = ">=3.10"
 dependencies = []
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/rrdf_workspace"]
+only-include = ["README.md"]
 
 [dependency-groups]
 dev = [
