@@ -10,7 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  core:
+    name: rrdf-core tests
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,17 +30,43 @@ jobs:
       - name: Create virtualenv
         run: uv venv .venv
 
-      - name: Install dependencies
+      - name: Install core deps
         run: |
           source .venv/bin/activate
           uv pip install -e rrdf-core
-          uv pip install -e rrdf-recon
           uv pip install pytest
 
       - name: Run rrdf-core tests
         run: |
           source .venv/bin/activate
           uv run pytest rrdf-core/tests
+
+  recon:
+    name: rrdf-recon tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.10
+
+      - name: Create virtualenv
+        run: uv venv .venv
+
+      - name: Install recon deps (light)
+        run: |
+          source .venv/bin/activate
+          uv pip install -e rrdf-core
+          uv pip install -e rrdf-recon
+          uv pip install pytest
 
       - name: Run rrdf-recon tests (light)
         run: |
