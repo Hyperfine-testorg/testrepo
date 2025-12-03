@@ -9,7 +9,7 @@ import numba as nb  # this makes things faster, but commented out to keep this s
 import numpy as np
 import xarray as xr
 
-from rrdf.load import ArrayLabels as lbl
+from rrdf_core.load import ArrayLabels as lbl
 
 
 def xgrid(

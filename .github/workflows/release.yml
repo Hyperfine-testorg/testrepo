@@ -1,28 +1,51 @@
 name: Release
 
 on:
-  # Triggers when a new tag is pushed
   push:
     tags:
-       - "v*.*.*"
+      - "core-v*.*.*"
+      - "recon-v*.*.*"
 
 jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # required to create GitHub releases
+      contents: write
     steps:
       - name: Checkout source
         uses: actions/checkout@v6
+
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
           version: "latest"
+
+      - name: Determine package
+        id: package
+        run: |
+          ref_name="${GITHUB_REF_NAME}"
+          case "$ref_name" in
+            core-v*)
+              echo "dir=rrdf-core" >> "$GITHUB_OUTPUT"
+              echo "package=rrdf-core" >> "$GITHUB_OUTPUT"
+              ;;
+            recon-v*)
+              echo "dir=rrdf-recon" >> "$GITHUB_OUTPUT"
+              echo "package=rrdf-recon" >> "$GITHUB_OUTPUT"
+              ;;
+            *)
+              echo "Unsupported tag format: $ref_name" >&2
+              exit 1
+              ;;
+          esac
+
       - name: Build package
+        working-directory: ${{ steps.package.outputs.dir }}
         run: uv build --wheel
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dist/*.whl
+          files: ${{ steps.package.outputs.dir }}/dist/*.whl
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

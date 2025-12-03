@@ -1,0 +1,68 @@
+name: rrdf-recon CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  recon-light:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.10
+
+      - name: Install recon stack (light)
+        run: |
+          uv pip install -e rrdf-core
+          uv pip install -e rrdf-recon
+          uv pip install pytest
+
+      - name: Run recon tests (light)
+        run: uv run pytest rrdf-recon/tests -m "not recon_data"
+
+  recon-data:
+    runs-on: ubuntu-latest
+    needs: recon-light
+    if: github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+        with:
+          lfs: true
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v7
+        with:
+          enable-cache: true
+
+      - name: Install Python
+        run: uv python install 3.10
+
+      - name: Install recon stack (full)
+        run: |
+          uv pip install -e rrdf-core
+          uv pip install -e rrdf-recon[simpleitk]
+          uv pip install pytest
+
+      - name: Run recon tests (with sample data)
+        run: uv run pytest rrdf-recon/tests -m recon_data
+
+      - name: CLI smoke tests (optional data)
+        run: |
+          uv run rrdf-recon data/10.1.0/fse_fast_t2_rrdf_20251105_162521.h5 || true
+          uv run rrdf-recon data/11.0.0/fse_fast_t2_rrdf_20251105_163403.h5 || true

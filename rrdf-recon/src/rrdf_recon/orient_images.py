@@ -1,6 +1,6 @@
 # Third Party
 import xarray as xr
-from rrdf.load import ArrayLabels as lbl
+from rrdf_core.load import ArrayLabels as lbl
 
 
 def orient_images(image, scan_plane, image_orientation="axial"):

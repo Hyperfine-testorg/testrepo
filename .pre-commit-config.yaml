@@ -1,4 +1,4 @@
-files: ^rrdf/|^tests/|^system/|\.py$|\.json$
+files: ^rrdf-core/src/|^rrdf-core/tests/|^rrdf-recon/src/|^rrdf-recon/tests/|^system/|\.py$|\.json$
 
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
@@ -31,7 +31,12 @@ repos:
         name: mypy
         language: system
         entry: mypy
-        args: ["rrdf", "tests"]
+        args: [
+          "rrdf-core/src/rrdf_core",
+          "rrdf-recon/src/rrdf_recon",
+          "rrdf-core/tests",
+          "rrdf-recon/tests",
+        ]
         pass_filenames: false
 
   - repo: local
@@ -47,4 +52,3 @@ repos:
     hooks:
       - id: deptry
         args: ["--ignore", "DEP001"]
-

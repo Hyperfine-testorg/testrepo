@@ -12,7 +12,7 @@ from numba import (
 )
 from scipy.interpolate import interpn
 
-from rrdf.load import ArrayLabels as lbl
+from rrdf_core.load import ArrayLabels as lbl
 
 
 def coil_combine(data, encoding_resolution, dims_combine=[lbl.CHAN]):

@@ -6,10 +6,10 @@ This assumes coils are not yet combined, and image is [Nc, Nr, Np, Ns, Necho_ima
 from pathlib import Path
 import time
 import numpy as np
-import SimpleITK as sitk  # noqa: E402
 import xarray as xr
-from rrdf.load import ArrayLabels as lbl
-from rrdf.coil_combine import coil_combine
+import SimpleITK as sitk  # noqa: E402
+from rrdf_core.load import ArrayLabels as lbl
+from rrdf_recon.coil_combine import coil_combine
 
 
 def register_echo_fse(image, encoding_resolution):

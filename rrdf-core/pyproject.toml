@@ -1,0 +1,25 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rrdf-core"
+version = "0.1.0"
+description = "Core serialization, validation, and data model helpers for RRDF files."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "h5py>=3.13.0",
+    "numpy>=1.23.5",
+    "xarray>=0.21.1",
+]
+
+[project.optional-dependencies]
+dev = [
+    "mypy>=1.11.0",
+    "pytest>=8.4.2",
+    "ruff>=0.8.0",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rrdf_core"]

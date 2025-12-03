@@ -1,5 +1,5 @@
 """
-Test suite for loading RRDF data from HDF5 files.
+Test suite for loading RRDF data from HDF5 files and reconstructing images.
 """
 
 import glob
@@ -8,17 +8,15 @@ import numpy as np
 import pytest
 from scipy.ndimage import shift
 
-from rrdf import load
-from rrdf.xgrid import xgrid
-from rrdf.xsdc import xsdc
+from rrdf_core import load
+from rrdf_recon.xgrid import xgrid
+from rrdf_recon.xsdc import xsdc
 
 
-# --- Tests --- #
 def get_test_file_path():
     """
     Returns the path to the HDF5 file containing RRDF data.
     """
-    # Search recursively in current directory and subdirectories
     matches = glob.glob("**/*rrdf*.h5", recursive=True)
     file_path = matches[0] if matches else None
     assert file_path is not None, "No rrdf file found for testing."
@@ -30,33 +28,6 @@ def get_test_file_path():
 def file_path():
     """Provide rrdf .h5 path to tests, or skip when unavailable."""
     return get_test_file_path()
-
-
-def test_load_dict_from_h5(file_path):
-    """
-    Test loading a dictionary from an HDF5 file. outside pyHFS context.
-    """
-    # Load the dictionary from the HDF5 file
-    load_dict_from_h5 = load.load_dict_from_h5(file_path)
-
-    # Check if the loaded dictionary is a dictionary
-    assert isinstance(load_dict_from_h5, dict), "Loaded data is not a dictionary."
-
-    assert "data" in load_dict_from_h5, "Key 'data' not found in loaded dictionary."
-
-    # Check if the dictionary has expected keys (example keys, adjust as needed)
-    expected_keys = [
-        "data_drift",
-        "data_matrix",
-        "kspace_coordinate_pe",
-        "data_drift_dims",
-        "data_matrix_dims",
-        "kspace_coordinate_pe_dims",
-    ]
-    for key in expected_keys:
-        assert key in load_dict_from_h5["data"], (
-            f"Key '{key}' not found in loaded dictionary."
-        )
 
 
 def test_recon_from_rrdf(file_path):
