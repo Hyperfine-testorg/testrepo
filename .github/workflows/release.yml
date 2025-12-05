@@ -8,9 +8,14 @@ on:
 
 jobs:
   release:
+    if: github.ref_type == 'tag'
     runs-on: ubuntu-latest
+    concurrency:
+      group: release-${{ github.ref }}
+      cancel-in-progress: false
     permissions:
       contents: write
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v6
@@ -18,26 +23,70 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v7
         with:
-          version: "latest"
+          # Pin to a specific uv version for reproducible releases
+          version: "0.9.15"
 
       - name: Determine package
         id: package
         run: |
+          set -euo pipefail
+
           ref_name="${GITHUB_REF_NAME}"
+
           case "$ref_name" in
-            core-v*)
-              echo "dir=rrdf-core" >> "$GITHUB_OUTPUT"
-              echo "package=rrdf-core" >> "$GITHUB_OUTPUT"
-              ;;
-            recon-v*)
-              echo "dir=rrdf-recon" >> "$GITHUB_OUTPUT"
-              echo "package=rrdf-recon" >> "$GITHUB_OUTPUT"
+            core-v*|recon-v*)
+              # Extract prefix before "-v", e.g. "core" or "recon"
+              pkg_prefix="${ref_name%%-v*}"
               ;;
             *)
               echo "Unsupported tag format: $ref_name" >&2
               exit 1
               ;;
           esac
+
+          dir="rrdf-${pkg_prefix}"
+          package="rrdf-${pkg_prefix}"
+
+          echo "dir=$dir" >> "$GITHUB_OUTPUT"
+          echo "package=$package" >> "$GITHUB_OUTPUT"
+
+      - name: Check tag matches package version
+        run: |
+          set -euo pipefail
+
+          ref_type="${GITHUB_REF_TYPE:-}"
+          ref_name="${GITHUB_REF_NAME}"
+
+          if [ "$ref_type" != "tag" ]; then
+            echo "Expected ref type 'tag' but got '$ref_type'" >&2
+            exit 1
+          fi
+
+          case "$ref_name" in
+            core-v*|recon-v*)
+              tag_version="${ref_name##*-v}"
+              ;;
+            *)
+              echo "Unexpected tag format: $ref_name" >&2
+              exit 1
+              ;;
+          esac
+
+          # Enforce simple SemVer: x.y.z
+          if ! printf '%s\n' "$tag_version" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "Tag version '$tag_version' is not a valid semantic version (x.y.z)" >&2
+            exit 1
+          fi
+
+          project_version=$(uv run --no-project python .github/scripts/get_project_version.py "${{ steps.package.outputs.dir }}/pyproject.toml")
+
+          echo "Tag version: $tag_version"
+          echo "Project version: $project_version"
+
+          if [ "$tag_version" != "$project_version" ]; then
+            echo "Tag version $tag_version does not match pyproject.toml version $project_version" >&2
+            exit 1
+          fi
 
       - name: Build package
         working-directory: ${{ steps.package.outputs.dir }}
