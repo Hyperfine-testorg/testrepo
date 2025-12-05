@@ -14,7 +14,7 @@ concurrency:
 
 jobs:
   build:
-    name: Package builds
+    name: Build package
     runs-on: ubuntu-latest
     strategy:
       matrix:
