@@ -3,11 +3,12 @@ Registers distorted images from odd/even echo parity for fast spin echo sequence
 This assumes coils are not yet combined, and image is [Nc, Nr, Np, Ns, Necho_images]
 """
 
-from pathlib import Path
 import time
+from pathlib import Path
+
 import numpy as np
+import SimpleITK as sitk
 import xarray as xr
-import SimpleITK as sitk  # noqa: E402
 from rrdf_core.load import ArrayLabels as lbl
 from rrdf_recon.coil_combine import coil_combine
 

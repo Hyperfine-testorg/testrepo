@@ -4,7 +4,7 @@ Reconstruction utilities for RRDF (research raw data format) files. This package
 
 ## Usage
 
-Install with `pip install rrdf-recon` (which will pull in `rrdf-core`). Optional registration helpers require `pip install rrdf-recon[simpleitk]`. Then:
+Install with `pip install rrdf-recon` (which will pull in `rrdf-core`). Then:
 
 ```bash
 rrdf-recon data/11.0.0/fse_fast_t2_rrdf_20251105_163403.h5

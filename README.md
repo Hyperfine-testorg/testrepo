@@ -3,7 +3,7 @@
 This repository now contains two packages with clear boundaries:
 
 - **`rrdf-core`** – lightweight serialization, validation helpers, and shared data labels for RRDF files. Depends only on `h5py`, `numpy`, and `xarray`.
-- **`rrdf-recon`** – optional reconstruction utilities and CLI built on top of `rrdf-core`. Pulls in heavier scientific dependencies (`scipy`, `numba`, `SimpleITK`, etc.).
+- **`rrdf-recon`** – reconstruction utilities and CLI built on top of `rrdf-core`. Pulls in heavier scientific dependencies (`scipy`, `numba`, `SimpleITK`, etc.).
 
 ## Install
 
@@ -11,11 +11,8 @@ This repository now contains two packages with clear boundaries:
 # core-only (load/inspect)
 pip install rrdf-core
 
-# full reconstruction stack (installs rrdf-core automatically)
+# full reconstruction stack (installs rrdf-core)
 pip install rrdf-recon
-
-# enable optional registration (SimpleITK)
-pip install rrdf-recon[simpleitk]
 ```
 
 ## Quickstart
