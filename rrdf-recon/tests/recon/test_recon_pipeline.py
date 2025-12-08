@@ -9,15 +9,13 @@ from rrdf_recon.xgrid import xgrid
 from rrdf_recon.xsdc import xsdc
 
 
-pytestmark = [pytest.mark.recon_data, pytest.mark.integration]
-
-
 DATA_FILES = [
     Path("data/10.1.0/fse_fast_t2_rrdf_20251105_162521.h5"),
     Path("data/11.0.0/fse_fast_t2_rrdf_20251105_163403.h5"),
 ]
 
 
+@pytest.mark.recon_data
 @pytest.mark.parametrize("file_path", DATA_FILES)
 def test_recon_from_rrdf(file_path: Path) -> None:
     if not file_path.exists():
