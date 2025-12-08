@@ -45,13 +45,12 @@ Use `rrdf_core` and `rrdf_recon` imports directly for all new code.
 ## Development
 
 ```bash
-uv sync --group dev        # install shared dev tooling
-uv pip install -e rrdf-core
-uv pip install -e rrdf-recon
+uv sync --group dev        # create .venv and install workspace + dev deps
+source .venv/bin/activate  # activate the uv-managed virtualenv
 
-uv run pytest rrdf-core/tests                        # minimal core tests
-uv run pytest rrdf-recon/tests -m "not recon_data"   # light recon tests (skip data-heavy)
-uv run pytest rrdf-recon/tests -m recon_data         # full recon data exercise
+uv run --no-project pytest rrdf-core/tests                        # minimal core tests
+uv run --no-project pytest rrdf-recon/tests -m "not recon_data"   # light recon tests (skip data-heavy)
+uv run --no-project pytest rrdf-recon/tests -m recon_data         # full recon data exercise
 ```
 
 ## Versioning & releases
