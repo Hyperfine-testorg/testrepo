@@ -17,8 +17,8 @@ def get_test_file_path():
     """
     Returns the path to the HDF5 file containing RRDF data.
     """
-    matches = glob.glob("**/*rrdf*.h5", recursive=True)
-    file_path = matches[0] if matches else None
+    matches = sorted(glob.glob("**/*rrdf*.h5", recursive=True))
+    file_path = matches[-1] if matches else None
     assert file_path is not None, "No rrdf file found for testing."
     print(f"Found rrdf file: {file_path}")
     return file_path
