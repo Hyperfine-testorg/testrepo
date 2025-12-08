@@ -8,7 +8,10 @@ version = "0.0.0"
 description = "Workspace for the rrdf-core and rrdf-recon packages."
 readme = "README.md"
 requires-python = ">=3.10"
-dependencies = []
+dependencies = [
+    "rrdf-core>=0.1.0",
+    "rrdf-recon>=0.1.0",
+]
 
 [tool.hatch.build.targets.wheel]
 only-include = ["README.md"]
@@ -30,3 +33,7 @@ namespace_packages = true
 
 [tool.deptry.per_rule_ignores]
 DEP004 = ["pytest"]
+
+[tool.uv.sources]
+"rrdf-core" = { path = "rrdf-core" }
+"rrdf-recon" = { path = "rrdf-recon" }
