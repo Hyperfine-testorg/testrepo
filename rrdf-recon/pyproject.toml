@@ -29,3 +29,9 @@ rrdf-recon = "rrdf_recon.cli:main"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rrdf_recon"]
+
+[tool.deptry]
+known_first_party = ["rrdf_recon"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["pytest"]

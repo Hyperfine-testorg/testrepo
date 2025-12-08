@@ -23,3 +23,9 @@ dev = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/rrdf_core"]
+
+[tool.deptry]
+known_first_party = ["rrdf_core"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["mypy", "pytest", "ruff"]

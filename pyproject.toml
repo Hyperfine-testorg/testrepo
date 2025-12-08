@@ -31,9 +31,6 @@ python_version = "3.10"
 ignore_missing_imports = true
 namespace_packages = true
 
-[tool.deptry.per_rule_ignores]
-DEP004 = ["pytest"]
-
 [tool.uv.sources]
 "rrdf-core" = { path = "rrdf-core" }
 "rrdf-recon" = { path = "rrdf-recon" }
