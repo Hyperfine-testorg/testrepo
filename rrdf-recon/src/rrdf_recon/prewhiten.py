@@ -5,7 +5,7 @@ Compute the noise covariance matrix and the prewhitening matrix from noise data 
 import numpy as np
 import xarray as xr
 
-from rrdf.load import ArrayLabels as lbl
+from rrdf_core.load import ArrayLabels as lbl
 
 
 def prewhiten(data: xr.DataArray, coords: xr.DataArray) -> xr.DataArray:

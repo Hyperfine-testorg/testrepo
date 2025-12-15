@@ -39,15 +39,15 @@ from pathlib import Path
 import numpy as np
 import argparse
 
-import rrdf.load as rd
-from rrdf.xsdc import xsdc
-from rrdf.xgrid import xgrid
-from rrdf.save_images import write_png, numpy_save, save_png
-from rrdf.load import ArrayLabels as lbl
-from rrdf.prewhiten import prewhiten
-from rrdf.coil_combine import coil_combine
-from rrdf.register_echo_fse import register_echo_fse
-from rrdf.orient_images import orient_images, orientation_from_scanplane
+from rrdf_core import load as rd
+from rrdf_core.load import ArrayLabels as lbl
+from rrdf_recon.xsdc import xsdc
+from rrdf_recon.xgrid import xgrid
+from rrdf_recon.save_images import write_png, numpy_save, save_png
+from rrdf_recon.prewhiten import prewhiten
+from rrdf_recon.coil_combine import coil_combine
+from rrdf_recon.register_echo_fse import register_echo_fse
+from rrdf_recon.orient_images import orient_images, orientation_from_scanplane
 
 
 def main():

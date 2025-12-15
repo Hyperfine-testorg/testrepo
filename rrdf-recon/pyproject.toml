@@ -1,0 +1,37 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "rrdf-recon"
+version = "0.1.0"
+description = "RRDF reconstruction utilities built on top of rrdf-core."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "rrdf-core>=0.1.0",
+    "numpy>=1.23.5",
+    "xarray>=0.21.1",
+    "imageio>=2.9.0",
+    "numba>=0.60.0",
+    "scipy>=1.14.1",
+    "SimpleITK>=2.1.1.2",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8.4.2"]
+full = [
+    "pytest>=8.4.2",
+]
+
+[project.scripts]
+rrdf-recon = "rrdf_recon.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/rrdf_recon"]
+
+[tool.deptry]
+known_first_party = ["rrdf_recon"]
+
+[tool.deptry.per_rule_ignores]
+DEP002 = ["pytest"]

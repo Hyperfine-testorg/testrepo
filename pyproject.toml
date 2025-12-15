@@ -1,22 +1,20 @@
 [build-system]
-requires = ["hatchling", "hatch-vcs"]
+requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "rrdf"
-dynamic = ["version"]
-description = "Image reconstruction library for Hyperfine RRDF data"
+name = "rrdf-workspace"
+version = "0.0.0"
+description = "Workspace for the rrdf-core and rrdf-recon packages."
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "h5py>=3.13.0",
-    "imageio>=2.9.0",
-    "numba>=0.60.0",
-    "numpy>=1.23.5",
-    "scipy>=1.14.1",
-    "xarray>=0.21.1",
-    "simpleitk>=2.1.1.2",
+    "rrdf-core>=0.1.0",
+    "rrdf-recon>=0.1.0",
 ]
+
+[tool.hatch.build.targets.wheel]
+only-include = ["README.md"]
 
 [dependency-groups]
 dev = [
@@ -28,10 +26,11 @@ dev = [
     "scipy-stubs>=1.15.3.0",
 ]
 
-[tool.hatch.version]
-source = "vcs"
-
 [tool.mypy]
 python_version = "3.10"
 ignore_missing_imports = true
 namespace_packages = true
+
+[tool.uv.sources]
+"rrdf-core" = { path = "rrdf-core" }
+"rrdf-recon" = { path = "rrdf-recon" }

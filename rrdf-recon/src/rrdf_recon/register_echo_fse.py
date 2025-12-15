@@ -3,13 +3,14 @@ Registers distorted images from odd/even echo parity for fast spin echo sequence
 This assumes coils are not yet combined, and image is [Nc, Nr, Np, Ns, Necho_images]
 """
 
-from pathlib import Path
 import time
+from pathlib import Path
+
 import numpy as np
-import SimpleITK as sitk  # noqa: E402
+import SimpleITK as sitk
 import xarray as xr
-from rrdf.load import ArrayLabels as lbl
-from rrdf.coil_combine import coil_combine
+from rrdf_core.load import ArrayLabels as lbl
+from rrdf_recon.coil_combine import coil_combine
 
 
 def register_echo_fse(image, encoding_resolution):
