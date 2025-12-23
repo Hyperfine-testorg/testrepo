@@ -1,62 +1,43 @@
-# RRDF workspace
+# RRDF - Research Raw Data Format Reconstruction
 
-This repository now contains two packages with clear boundaries:
+A Python library for reconstructing MRI images from Hyperfine's Research Raw Data Format (RRDF) files.
 
-- **`rrdf-core`** – lightweight serialization, validation helpers, and shared data labels for RRDF files. Depends only on `h5py`, `numpy`, and `xarray`.
-- **`rrdf-recon`** – reconstruction utilities and CLI built on top of `rrdf-core`. Pulls in heavier scientific dependencies (`scipy`, `numba`, `SimpleITK`, etc.).
+## Installation
 
-## Install
+### Prerequisites
+- Python 3.10 or higher
+- [uv](https://docs.astral.sh/uv/) package manager
 
-```bash
-# core-only (load/inspect)
-pip install rrdf-core
+### Setup
 
-# full reconstruction stack (installs rrdf-core)
-pip install rrdf-recon
-```
+1. Install uv (if not already installed):
+   ```bash
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
 
-## Quickstart
+2. Install dependencies (including development extras) from the repository root:
+   ```bash
+   uv sync --group dev
+   ```
 
-**Load RRDF metadata and arrays (core only)**
-```python
-from rrdf_core import read_rrdf
+3. Activate the virtual environment:
+   ```bash
+   source .venv/bin/activate
+   ```
 
-raw_data, coords2d, data_drift, meta, is_deepdish = read_rrdf("path/to/file.h5")
-```
+## Usage
 
-**Run reconstruction from the CLI (recon package)**
-```bash
-rrdf-recon data/10.1.0/fse_fast_t2_rrdf_20251105_162521.h5
-```
-Outputs default to `./output` as `.npy`/`.png` files.
+### Basic Reconstruction
 
-**Programmatic reconstruction**
-```python
-from pathlib import Path
-from rrdf_recon.cli import reconstruct_image
-
-reconstruct_image(Path("data/11.0.0/fse_fast_t2_rrdf_20251105_163403.h5"), Path("output"))
-```
-
-## Compatibility
-
-Use `rrdf_core` and `rrdf_recon` imports directly for all new code.
-
-## Development
+Reconstruct an RRDF file with:
 
 ```bash
-uv sync --group dev        # create .venv and install workspace + dev deps
-source .venv/bin/activate  # activate the uv-managed virtualenv
-
-uv run --no-project pytest rrdf-core/tests                        # minimal core tests
-uv run --no-project pytest rrdf-recon/tests -m "not recon_data"   # light recon tests (skip data-heavy)
-uv run --no-project pytest rrdf-recon/tests -m recon_data         # full recon data exercise
+python recon_rrdf.py data/10.1.0/fse_fast_t2_rrdf_20251105_162521.h5
 ```
 
-## Versioning & releases
+Outputs will be placed in `/data` as `.npy` files. You can read the `.npy` files into MATLAB using [readNPY](https://github.com/kwikteam/npy-matlab) like this:
 
-- `rrdf-core` and `rrdf-recon` are versioned independently (see their `pyproject.toml` files).
-- Tags drive releases:
-  - `core-vX.Y.Z` → builds/publishes `rrdf-core`
-  - `recon-vX.Y.Z` → builds/publishes `rrdf-recon`
-- Keep reconstruction imports limited to the public `rrdf_core` API to avoid cross-layer coupling.
+```matlab
+img = readNPY('filename_r.npy') + 1i*readNPY('filename_i.npy');
+```
+(readNPY doesn't support complex input, which is why we save outputs as separate real and imaginary parts).
