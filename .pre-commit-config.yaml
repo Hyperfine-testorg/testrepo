@@ -57,8 +57,8 @@ repos:
           - rrdf-core/pyproject.toml
           - --ignore
           - DEP001
-          - --extend-exclude  # deptry runs in the project root so exclude rrdf-recon
-          - rrdf-recon
+          - --extend-exclude  # deptry runs in the project root so exclude rrdf-recon and root wrappers
+          - rrdf-recon|recon_rrdf\.py
         pass_filenames: false
 
       - id: deptry
