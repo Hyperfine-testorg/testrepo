@@ -80,3 +80,11 @@ jobs:
         run: |
           uv run rrdf-recon data/10.1.0/fse_fast_t2_rrdf_20251105_162521.h5
           uv run rrdf-recon data/11.0.0/fse_fast_t2_rrdf_20251105_163403.h5
+
+      - name: Assert CLI outputs exist
+        run: |
+          set -euo pipefail
+          test -f output/fse_fast_t2_rrdf_20251105_162521.png
+          test -f output/fse_fast_t2_rrdf_20251105_162521_image.npy
+          test -f output/fse_fast_t2_rrdf_20251105_163403.png
+          test -f output/fse_fast_t2_rrdf_20251105_163403_image.npy
