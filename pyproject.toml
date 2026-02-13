@@ -32,5 +32,5 @@ ignore_missing_imports = true
 namespace_packages = true
 
 [tool.uv.sources]
-"rrdf-core" = { path = "rrdf-core" }
-"rrdf-recon" = { path = "rrdf-recon" }
+"rrdf-core" = { path = "rrdf-core", editable = true }
+"rrdf-recon" = { path = "rrdf-recon", editable = true }

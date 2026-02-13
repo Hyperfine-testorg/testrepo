@@ -879,7 +879,7 @@ wheels = [
 [[package]]
 name = "rrdf-core"
 version = "0.1.0"
-source = { directory = "rrdf-core" }
+source = { editable = "rrdf-core" }
 dependencies = [
     { name = "h5py" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -902,7 +902,7 @@ provides-extras = ["dev"]
 [[package]]
 name = "rrdf-recon"
 version = "0.1.0"
-source = { directory = "rrdf-recon" }
+source = { editable = "rrdf-recon" }
 dependencies = [
     { name = "imageio" },
     { name = "numba" },
@@ -951,8 +951,8 @@ dev = [
 
 [package.metadata]
 requires-dist = [
-    { name = "rrdf-core", directory = "rrdf-core" },
-    { name = "rrdf-recon", directory = "rrdf-recon" },
+    { name = "rrdf-core", editable = "rrdf-core" },
+    { name = "rrdf-recon", editable = "rrdf-recon" },
 ]
 
 [package.metadata.requires-dev]
