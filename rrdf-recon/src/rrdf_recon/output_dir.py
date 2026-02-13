@@ -18,4 +18,3 @@ def default_output_dir() -> Path:
     except IndexError:
         # Fallback for unexpected layouts.
         return here.parent / "output"
-
