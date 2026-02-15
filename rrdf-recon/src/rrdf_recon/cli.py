@@ -48,6 +48,7 @@ from rrdf_recon.prewhiten import prewhiten
 from rrdf_recon.coil_combine import coil_combine
 from rrdf_recon.register_echo_fse import register_echo_fse
 from rrdf_recon.orient_images import orient_images, orientation_from_scanplane
+from rrdf_recon.output_dir import default_output_dir
 
 
 def main():
@@ -60,8 +61,7 @@ def main():
 
     # ---------------------------------------------------------------
     # Output directory
-    base_dir = Path(__file__).resolve().parent
-    data_dir = base_dir / "output"
+    data_dir = default_output_dir()
     data_dir.mkdir(parents=True, exist_ok=True)  # create if missing
 
     # ---------------------------------------------------------------
