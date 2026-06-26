@@ -2,6 +2,7 @@
 Load RRDF (research raw data format) data from HDF5 files.
 """
 
+import ast
 import xarray as xr
 import numpy as np
 import glob
@@ -146,14 +147,17 @@ def read_rrdf(rrdf_path: str):
 def get_dims_fromh5(data, key, is_deepdish=False):
     """deepdish was used up through 10.1 SW. It saves lists differently from h5py."""
     dims_group = data[key]
-    if is_deepdish and "CLASS" in dims_group:  # <= 10.1 beta SW
+    if isinstance(dims_group, str):
+        # Oldest deepdish format (SW ~9.x): dims are stored as a string repr of a
+        # Python list in the parent group's HDF5 attrs and loaded as a plain string.
+        return ast.literal_eval(dims_group)
+    if is_deepdish and isinstance(dims_group, dict) and "CLASS" in dims_group:  # <= 10.1 beta SW
         dimlist = []
         for k in dims_group.keys():
             if k.startswith("i") and k[1].isdigit():
                 dimlist.append(str(dims_group[k]))
-    else:  # >= 11.0 SW
-        dimlist = list(dims_group)
-    return dimlist
+        return dimlist
+    return list(dims_group)  # >= 11.0 SW
 
 
 def get_nparray_dd(arr):
