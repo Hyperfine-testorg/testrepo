@@ -12,7 +12,7 @@ The repository contains two packages:
 ### Prerequisites
 - Python 3.10 or higher
 - [uv](https://docs.astral.sh/uv/) package manager
-- [Git LFS](https://git-lfs.com/). The sample RRDF files in `data/`, the coil maps in `system/coil_maps/`, and the gradient maps in `system/gradient_maps/` are stored with Git LFS. The reconstruction needs the `system/` files, so LFS is required even if you bring your own data.
+- [Git LFS](https://git-lfs.com/), only if you want the sample RRDF files in `data/` (and the coil/gradient maps in `system/`, which the current reconstruction does not use). If you bring your own RRDF files you can skip LFS.
 
 ### Setup
 
